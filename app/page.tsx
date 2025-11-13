@@ -1,18 +1,23 @@
+import { FileUp, Lock, ShieldCheck, UploadCloud } from "lucide-react";
+
 const features = [
   {
     title: "Upload anything",
     description:
       "Drag & drop PDFs, manuals, contracts, or paste raw text in seconds.",
+    icon: FileUp,
   },
   {
     title: "Context you can trust",
     description:
       "DocQuery cites the original passages so teams can verify every answer.",
+    icon: ShieldCheck,
   },
   {
     title: "Fast, private, secure",
     description:
       "Process documents on your own infrastructure or keep everything in the cloud.",
+    icon: Lock,
   },
 ];
 
@@ -112,6 +117,9 @@ export default function Home() {
                 key={feature.title}
                 className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur transition hover:border-white/20 hover:bg-white/[0.08]"
               >
+                <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-200">
+                  <feature.icon className="h-5 w-5" aria-hidden="true" />
+                </div>
                 <h3 className="text-base font-medium text-white">
                   {feature.title}
                 </h3>
@@ -143,16 +151,10 @@ export default function Home() {
 
               <div className="mt-6 rounded-2xl border-2 border-dashed border-white/15 bg-slate-950/50 p-10 text-center">
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5">
-                  <svg
-                    viewBox="0 0 24 24"
+                  <UploadCloud
                     className="h-8 w-8 text-emerald-300"
                     aria-hidden="true"
-                  >
-                    <path
-                      fill="currentColor"
-                      d="M12 3a1 1 0 0 1 1 1v10.59l2.3-2.3a1 1 0 1 1 1.4 1.42l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.42L11 14.59V4a1 1 0 0 1 1-1Zm-7 13a1 1 0 1 1 0 2h14a1 1 0 1 1 0 2H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h3a1 1 0 0 1 0 2H5a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1Z"
-                    />
-                  </svg>
+                  />
                 </div>
                 <div className="mt-6 space-y-2">
                   <p className="text-lg font-semibold text-white">
