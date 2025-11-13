@@ -12,21 +12,23 @@ type StatusState =
 const initialStatus: StatusState = { variant: "idle", message: null };
 
 export default function RegisterPage() {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [company, setCompany] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [acceptedTos, setAcceptedTos] = useState(false);
   const [status, setStatus] = useState<StatusState>(initialStatus);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const form = event.currentTarget;
-    const formData = new FormData(form);
 
-    const firstName = String(formData.get("firstName") || "").trim();
-    const lastName = String(formData.get("lastName") || "").trim();
-    const company = String(formData.get("company") || "").trim();
-    const email = String(formData.get("email") || "").trim();
-    const password = String(formData.get("password") || "");
-    const confirmPassword = String(formData.get("confirmPassword") || "");
-    const acceptedTos = formData.get("tos") === "on";
+    const trimmedFirstName = firstName.trim();
+    const trimmedLastName = lastName.trim();
+    const trimmedCompany = company.trim();
+    const trimmedEmail = email.trim();
 
     if (!acceptedTos) {
       setStatus({
@@ -57,13 +59,13 @@ export default function RegisterPage() {
       setStatus(initialStatus);
 
       const { error } = await supabase.auth.signUp({
-        email,
+        email: trimmedEmail,
         password,
         options: {
           data: {
-            first_name: firstName,
-            last_name: lastName,
-            company,
+            first_name: trimmedFirstName,
+            last_name: trimmedLastName,
+            company: trimmedCompany,
           },
           emailRedirectTo:
             process.env.NEXT_PUBLIC_DOCQUERY_POST_SIGNUP_REDIRECT ??
@@ -79,7 +81,14 @@ export default function RegisterPage() {
         return;
       }
 
-      form.reset();
+      // Reset form
+      setFirstName("");
+      setLastName("");
+      setCompany("");
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
+      setAcceptedTos(false);
       setStatus({
         variant: "success",
         message:
@@ -139,7 +148,10 @@ export default function RegisterPage() {
                   label="First name"
                   placeholder="Ada"
                   autoComplete="given-name"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
                   required
+                  disabled={isSubmitting}
                 />
                 <TextField
                   id="lastName"
@@ -148,7 +160,10 @@ export default function RegisterPage() {
                   label="Last name"
                   placeholder="Lovelace"
                   autoComplete="family-name"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
                   required
+                  disabled={isSubmitting}
                 />
               </div>
               <TextField
@@ -157,6 +172,9 @@ export default function RegisterPage() {
                 type="text"
                 label="Company or team"
                 placeholder="Acme Robotics"
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                disabled={isSubmitting}
               />
               <TextField
                 id="email"
@@ -165,7 +183,10 @@ export default function RegisterPage() {
                 label="Work email"
                 placeholder="you@company.com"
                 autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={isSubmitting}
               />
               <div className="grid gap-6 sm:grid-cols-2">
                 <TextField
@@ -175,7 +196,10 @@ export default function RegisterPage() {
                   label="Password"
                   placeholder="Create a password"
                   autoComplete="new-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   required
+                  disabled={isSubmitting}
                 />
                 <TextField
                   id="confirmPassword"
@@ -184,7 +208,10 @@ export default function RegisterPage() {
                   label="Confirm password"
                   placeholder="Repeat password"
                   autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                   required
+                  disabled={isSubmitting}
                 />
               </div>
               <div className="flex items-center gap-3 text-xs text-slate-400">
@@ -192,7 +219,10 @@ export default function RegisterPage() {
                   type="checkbox"
                   id="tos"
                   name="tos"
+                  checked={acceptedTos}
+                  onChange={(e) => setAcceptedTos(e.target.checked)}
                   className="h-4 w-4 rounded border border-white/15 bg-slate-950/70 accent-emerald-400"
+                  disabled={isSubmitting}
                 />
                 <label htmlFor="tos">
                   I agree to the{" "}
