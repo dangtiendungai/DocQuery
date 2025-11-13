@@ -282,24 +282,6 @@ export default function Home() {
             </div>
           </div>
         </section>
-
-        <footer className="flex flex-col gap-4 border-t border-white/10 pt-8 text-sm text-slate-400 sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            © {new Date().getFullYear()} DocQuery. Built for teams shipping RAG
-            in production.
-          </p>
-          <div className="flex flex-wrap items-center gap-3">
-            <a className="transition hover:text-white" href="#">
-              Product updates
-            </a>
-            <a className="transition hover:text-white" href="#">
-              Security
-            </a>
-            <a className="transition hover:text-white" href="#">
-              Documentation
-            </a>
-          </div>
-        </footer>
       </main>
     </div>
   );
