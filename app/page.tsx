@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Button from "@/components/ui/Button";
 import FileUpload from "@/components/ui/FileUpload";
 import { Bot, FileUp, Lock, ShieldCheck } from "lucide-react";
@@ -86,6 +86,23 @@ function formatFileSize(bytes: number): string {
 export default function Home() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
+  const uploadSectionRef = useRef<HTMLDivElement>(null);
+
+  const scrollToUpload = () => {
+    uploadSectionRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+
+  const handleWatchVideo = () => {
+    // You can replace this with an actual video URL or modal
+    alert(
+      "Video overview coming soon! This would open a 2-minute overview video."
+    );
+    // Or you could open a modal:
+    // setShowVideoModal(true);
+  };
 
   const fetchDocuments = async () => {
     try {
@@ -144,10 +161,13 @@ export default function Home() {
               inside your files.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Button className="rounded-full">Upload your first docs</Button>
+              <Button className="rounded-full" onClick={scrollToUpload}>
+                Upload your first docs
+              </Button>
               <Button
                 variant="outline"
                 className="rounded-full border border-slate-700 text-slate-200 hover:border-slate-500 hover:text-white"
+                onClick={handleWatchVideo}
               >
                 Watch 2-min overview
               </Button>
@@ -175,7 +195,10 @@ export default function Home() {
 
         <section className="grid grid-cols-1 gap-12 xl:grid-cols-[1.1fr_1fr]">
           <div className="space-y-8">
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-emerald-500/10 backdrop-blur">
+            <div
+              ref={uploadSectionRef}
+              className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-emerald-500/10 backdrop-blur"
+            >
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-semibold text-white">
