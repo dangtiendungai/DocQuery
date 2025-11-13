@@ -62,7 +62,7 @@ export default function LoginPage() {
                     href="#"
                     className="text-xs font-medium text-emerald-300 hover:text-emerald-200"
                   >
-                    Forgot?
+                    Forgot your password?
                   </a>
                 </div>
                 <TextField
