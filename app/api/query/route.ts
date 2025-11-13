@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { generateAnswer } from "@/lib/llm";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -105,14 +106,22 @@ export async function POST(request: NextRequest) {
         };
       }) || [];
 
-    // Generate a simple answer by combining relevant chunks
-    const answer =
-      results.length > 0
-        ? results
-            .slice(0, 3)
-            .map((r) => r.content)
-            .join("\n\n...\n\n")
-        : "I couldn't find any relevant information in your documents. Try rephrasing your question or upload more documents.";
+    // Generate an intelligent answer using LLM if chunks found
+    let answer: string;
+    if (results.length > 0) {
+      // Use LLM to synthesize answer from chunks
+      answer = await generateAnswer({
+        query,
+        chunks: results.slice(0, 5).map((r) => ({
+          content: r.content,
+          documentName: r.document.name,
+          chunkIndex: r.chunkIndex,
+        })),
+      });
+    } else {
+      answer =
+        "I couldn't find any relevant information in your documents. Try rephrasing your question or upload more documents.";
+    }
 
     const citations = results.map((r) => r.citation);
 
