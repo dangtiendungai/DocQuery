@@ -1,5 +1,5 @@
 import Button from "@/components/ui/Button";
-import { FileUp, Lock, ShieldCheck, UploadCloud } from "lucide-react";
+import { Bot, FileUp, Lock, ShieldCheck, UploadCloud } from "lucide-react";
 
 const features = [
   {
@@ -231,25 +231,38 @@ export default function Home() {
               </div>
 
               <div className="mt-6 space-y-4 text-sm">
-                {messages.map((message, index) => (
-                  <div
-                    key={index}
-                    className={`rounded-2xl px-4 py-3 ${
-                      message.role === "assistant"
-                        ? "bg-emerald-500/10 text-emerald-100"
-                        : "bg-white/5 text-slate-100"
-                    }`}
-                  >
-                    <p className="whitespace-pre-line leading-relaxed">
-                      {message.content}
-                    </p>
-                    {"citation" in message && (
-                      <span className="mt-3 block text-xs font-medium text-emerald-200">
-                        {message.citation}
-                      </span>
-                    )}
-                  </div>
-                ))}
+                {messages.map((message, index) => {
+                  const isAssistant = message.role === "assistant";
+
+                  return (
+                    <div
+                      key={index}
+                      className={`rounded-2xl px-4 py-3 ${
+                        isAssistant
+                          ? "bg-emerald-500/10 text-emerald-100"
+                          : "bg-white/5 text-slate-100"
+                      }`}
+                    >
+                      <div className={isAssistant ? "flex gap-3" : ""}>
+                        {isAssistant && (
+                          <span className="mt-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-200">
+                            <Bot className="h-4 w-4" aria-hidden="true" />
+                          </span>
+                        )}
+                        <div className="space-y-3">
+                          <p className="whitespace-pre-line leading-relaxed">
+                            {message.content}
+                          </p>
+                          {"citation" in message && (
+                            <span className="block text-xs font-medium text-emerald-200">
+                              {message.citation}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               <div className="mt-6 rounded-full border border-white/10 bg-slate-950/80 px-5 py-3 text-sm text-slate-300">
@@ -265,7 +278,7 @@ export default function Home() {
               <div className="mt-6 flex flex-col gap-4">
                 {steps.map((step) => (
                   <div key={step.number} className="flex gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/20 text-base font-semibold text-emerald-200">
+                    <div className="flex flex-shrink-0 h-10 w-10 items-center justify-center rounded-full bg-emerald-500/20 text-base font-semibold text-emerald-200">
                       {step.number}
                     </div>
                     <div>
