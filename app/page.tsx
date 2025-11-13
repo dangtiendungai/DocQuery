@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import FileUpload from "@/components/ui/FileUpload";
 import { Bot, FileUp, Lock, ShieldCheck } from "lucide-react";
@@ -84,6 +85,7 @@ function formatFileSize(bytes: number): string {
 }
 
 export default function Home() {
+  const router = useRouter();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const uploadSectionRef = useRef<HTMLDivElement>(null);
@@ -287,6 +289,7 @@ export default function Home() {
                   variant="ghost"
                   size="sm"
                   className="rounded-full border-white/10 text-slate-200 hover:border-white/30 hover:text-white"
+                  onClick={() => router.push('/chats')}
                 >
                   Launch playground
                 </Button>

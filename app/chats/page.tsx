@@ -1,4 +1,10 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
+import { supabase } from "@/lib/supabaseClient";
+import { Bot, Loader2 } from "lucide-react";
 
 const conversations = [
   {
@@ -24,17 +30,136 @@ const suggestions = [
   "Surface policies mentioning GDPR data retention",
 ];
 
-const recentFiles = [
-  { name: "Warranty & Returns.pdf", status: "Synced", color: "bg-emerald-400" },
-  { name: "Support Playbook.md", status: "Updated", color: "bg-cyan-400" },
-  {
-    name: "Onboarding_Checklist.txt",
-    status: "Processing",
-    color: "bg-amber-400",
-  },
-];
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+  citations?: string[];
+}
+
+interface Document {
+  id: string;
+  name: string;
+  status: string;
+  chunk_count: number;
+  created_at: string;
+}
 
 export default function ChatsPage() {
+  const router = useRouter();
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      role: "assistant",
+      content:
+        "Hello! I'm DocQuery. Ask me anything about your uploaded documents, and I'll search through them to find relevant answers.",
+    },
+  ]);
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [loadingDocs, setLoadingDocs] = useState(true);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
+
+  const fetchDocuments = async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        router.push("/login");
+        return;
+      }
+
+      const response = await fetch("/api/documents", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setDocuments(data.documents || []);
+      }
+    } catch (error) {
+      console.error("Error fetching documents:", error);
+    } finally {
+      setLoadingDocs(false);
+    }
+  };
+
+  const handleSend = async () => {
+    if (!query.trim() || loading) return;
+
+    const userMessage = query.trim();
+    setQuery("");
+    setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
+    setLoading(true);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        router.push("/login");
+        return;
+      }
+
+      const response = await fetch("/api/query", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ query: userMessage, limit: 5 }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: data.answer,
+            citations: data.citations,
+          },
+        ]);
+      } else {
+        const error = await response.json();
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: `Error: ${error.error || "Failed to get response"}`,
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error("Error querying:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Sorry, I encountered an error. Please try again.",
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 px-6 py-16 text-slate-100 lg:px-0">
       <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[320px_1fr] px-6 lg:px-12">
@@ -110,51 +235,98 @@ export default function ChatsPage() {
               </Button>
             </div>
 
-            <div className="mt-6 rounded-2xl border border-white/10 bg-slate-950/80 p-4 text-sm text-slate-300">
+            <div className="mt-6 rounded-2xl border border-white/10 bg-slate-950/80 p-4 text-sm text-slate-300 max-h-[500px] overflow-y-auto">
               <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
                 Live conversation
               </p>
               <div className="space-y-4">
-                <div className="rounded-2xl bg-white/5 px-4 py-3 text-slate-100">
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                    You
-                  </p>
-                  <p className="mt-1">
-                    Summarize the new refund process and highlight anything
-                    different for EU customers.
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-emerald-500/10 px-4 py-3 text-emerald-100">
-                  <p className="text-xs uppercase tracking-[0.2em] text-emerald-200">
-                    DocQuery
-                  </p>
-                  <p className="mt-1">
-                    EU customers now receive refunds within 10 business days
-                    (previously 14). Section 6.1 details shipping label
-                    coverage, and Annex B covers cross-border exceptions.
-                  </p>
-                  <span className="mt-3 block text-xs font-medium text-emerald-200">
-                    Sources: Refund_Updates.pdf §6.1 · Annex B
-                  </span>
-                </div>
-                <div className="rounded-2xl bg-white/5 px-4 py-3 text-slate-100">
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                    You
-                  </p>
-                  <p className="mt-1">
-                    Draft an internal announcement for the support team.
-                  </p>
-                </div>
+                {messages.map((message, index) => {
+                  const isAssistant = message.role === "assistant";
+                  return (
+                    <div
+                      key={index}
+                      className={`rounded-2xl px-4 py-3 ${
+                        isAssistant
+                          ? "bg-emerald-500/10 text-emerald-100"
+                          : "bg-white/5 text-slate-100"
+                      }`}
+                    >
+                      <div className="flex gap-3">
+                        {isAssistant && (
+                          <span className="mt-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-200">
+                            <Bot className="h-3 w-3" aria-hidden="true" />
+                          </span>
+                        )}
+                        <div className="flex-1">
+                          <p
+                            className={`text-xs uppercase tracking-[0.2em] ${
+                              isAssistant
+                                ? "text-emerald-200"
+                                : "text-slate-400"
+                            }`}
+                          >
+                            {isAssistant ? "DocQuery" : "You"}
+                          </p>
+                          <p className="mt-1 whitespace-pre-wrap leading-relaxed">
+                            {message.content}
+                          </p>
+                          {message.citations &&
+                            message.citations.length > 0 && (
+                              <div className="mt-3 space-y-1">
+                                <p className="text-xs font-medium text-emerald-200">
+                                  Sources:
+                                </p>
+                                <ul className="list-disc list-inside space-y-1 text-xs text-emerald-200/80">
+                                  {message.citations.map((citation, i) => (
+                                    <li key={i}>{citation}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {loading && (
+                  <div className="rounded-2xl bg-emerald-500/10 px-4 py-3 text-emerald-100">
+                    <div className="flex gap-3">
+                      <span className="mt-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-200">
+                        <Bot className="h-3 w-3" aria-hidden="true" />
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <p className="text-xs uppercase tracking-[0.2em] text-emerald-200">
+                          DocQuery is thinking...
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
               </div>
             </div>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <textarea
+                ref={textareaRef}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder="Ask DocQuery anything about your knowledge base..."
-                className="min-h-[120px] flex-1 rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+                className="min-h-[120px] flex-1 rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 resize-none"
+                disabled={loading}
               />
-              <Button className="rounded-2xl bg-emerald-400 text-slate-950 hover:bg-emerald-300 sm:self-start">
-                Send
+              <Button
+                onClick={handleSend}
+                disabled={loading || !query.trim()}
+                className="rounded-2xl bg-emerald-400 text-slate-950 hover:bg-emerald-300 sm:self-start disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Send"
+                )}
               </Button>
             </div>
           </section>
@@ -164,20 +336,38 @@ export default function ChatsPage() {
               Recently synced files
             </h2>
             <div className="mt-4 grid gap-4 md:grid-cols-3">
-              {recentFiles.map((file) => (
-                <div
-                  key={file.name}
-                  className="rounded-2xl border border-white/10 bg-slate-900/60 p-4"
-                >
-                  <span
-                    className={`inline-flex h-2 w-12 rounded-full ${file.color}`}
-                  />
-                  <p className="mt-3 text-sm font-semibold text-white">
-                    {file.name}
-                  </p>
-                  <p className="text-xs text-slate-400">{file.status}</p>
-                </div>
-              ))}
+              {loadingDocs ? (
+                <p className="text-sm text-slate-400">Loading documents...</p>
+              ) : documents.length === 0 ? (
+                <p className="text-sm text-slate-400">
+                  No documents yet. Upload files from the home page!
+                </p>
+              ) : (
+                documents.slice(0, 3).map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="rounded-2xl border border-white/10 bg-slate-900/60 p-4"
+                  >
+                    <span
+                      className={`inline-flex h-2 w-12 rounded-full ${
+                        doc.status === "processed"
+                          ? "bg-emerald-400"
+                          : doc.status === "processing"
+                          ? "bg-amber-400"
+                          : "bg-red-400"
+                      }`}
+                    />
+                    <p className="mt-3 text-sm font-semibold text-white">
+                      {doc.name}
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      {doc.status === "processed"
+                        ? `Processed • ${doc.chunk_count} chunks`
+                        : doc.status}
+                    </p>
+                  </div>
+                ))
+              )}
             </div>
           </section>
         </main>
