@@ -63,6 +63,7 @@ export default function TextField({
             className="absolute inset-y-0 right-3 flex items-center justify-center rounded-full p-2 text-emerald-300 transition hover:text-emerald-200 cursor-pointer"
             aria-label={isVisible ? "Hide password" : "Show password"}
             aria-pressed={isVisible}
+            tabIndex={-1}
           >
             {isVisible ? (
               <EyeOff className="h-4 w-4" aria-hidden="true" />
