@@ -37,7 +37,7 @@ const recentFiles = [
 export default function ChatsPage() {
   return (
     <div className="min-h-screen bg-slate-950 px-6 py-16 text-slate-100 lg:px-0">
-      <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[320px_1fr]">
+      <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[320px_1fr] px-6 lg:px-12">
         <aside className="space-y-6">
           <div>
             <h1 className="text-2xl font-semibold text-white">Chats</h1>

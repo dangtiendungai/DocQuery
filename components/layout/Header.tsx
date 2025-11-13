@@ -1,4 +1,12 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { LogOut } from "lucide-react";
+import { supabase } from "@/lib/supabaseClient";
+import Button from "@/components/ui/Button";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 const navItems = [
   { label: "Product", href: "/" },
@@ -8,6 +16,34 @@ const navItems = [
 ];
 
 export default function Header() {
+  const router = useRouter();
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/");
+    router.refresh();
+  };
+
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-950">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-6 lg:px-12">
@@ -32,26 +68,53 @@ export default function Header() {
             </Link>
           ))}
         </nav>
-        <div className="hidden items-center gap-3 sm:flex">
-          <Link
-            href="/login"
-            className="rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-white/30 hover:text-white"
-          >
-            Log in
-          </Link>
+        {!loading && (
+          <div className="hidden items-center gap-3 sm:flex">
+            {user ? (
+              <Button
+                variant="icon"
+                onClick={handleLogout}
+                className="rounded-full"
+                aria-label="Log out"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-white/30 hover:text-white"
+                >
+                  Log in
+                </Link>
+                <Link
+                  href="/register"
+                  className="rounded-full bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
+                >
+                  Get started
+                </Link>
+              </>
+            )}
+          </div>
+        )}
+        {!loading && !user && (
           <Link
             href="/register"
-            className="rounded-full bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
+            className="inline-flex items-center rounded-full bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300 sm:hidden"
           >
-            Get started
+            Start
           </Link>
-        </div>
-        <Link
-          href="/register"
-          className="inline-flex items-center rounded-full bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300 sm:hidden"
-        >
-          Start
-        </Link>
+        )}
+        {!loading && user && (
+          <Button
+            variant="icon"
+            onClick={handleLogout}
+            className="rounded-full sm:hidden"
+            aria-label="Log out"
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
+        )}
       </div>
     </header>
   );

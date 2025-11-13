@@ -126,8 +126,8 @@ export default function RegisterPage() {
             </p>
 
             <form className="mt-8 space-y-6" onSubmit={handleSubmit} noValidate>
-              <div aria-live="polite" className="min-h-[1.5rem] text-sm">
-                {status.variant !== "idle" && status.message && (
+              {status.variant !== "idle" && status.message && (
+                <div aria-live="polite" className="min-h-[1.5rem] text-sm">
                   <div
                     className={`rounded-2xl border px-4 py-3 ${
                       status.variant === "success"
@@ -137,8 +137,8 @@ export default function RegisterPage() {
                   >
                     {status.message}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
 
               <div className="grid gap-6 sm:grid-cols-2">
                 <TextField

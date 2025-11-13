@@ -73,7 +73,7 @@ const faqs = [
 export default function PricingPage() {
   return (
     <div className="min-h-screen bg-slate-950 px-6 py-20 text-slate-100 lg:px-0">
-      <div className="mx-auto flex max-w-6xl flex-col gap-16">
+      <div className="mx-auto flex max-w-6xl flex-col gap-16 px-6 lg:px-12">
         <header className="space-y-6 text-center">
           <span className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-500/10 px-4 py-1 text-sm font-medium text-emerald-200 ring-1 ring-emerald-400/40">
             Flexible pricing

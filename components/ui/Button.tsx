@@ -1,7 +1,7 @@
 import { ButtonHTMLAttributes } from "react";
 import { cn } from "@/lib/cn";
 
-type ButtonVariant = "primary" | "outline" | "subtle" | "ghost" | "link";
+type ButtonVariant = "primary" | "outline" | "subtle" | "ghost" | "link" | "icon";
 type ButtonSize = "sm" | "md" | "lg";
 
 const variantClasses: Record<ButtonVariant, string> = {
@@ -10,6 +10,7 @@ const variantClasses: Record<ButtonVariant, string> = {
   subtle: "border border-white/10 bg-white/10 text-white hover:border-white/20 hover:bg-white/15",
   ghost: "border border-white/15 text-slate-200 hover:border-white/30 hover:text-white",
   link: "px-0 text-emerald-300 hover:text-emerald-200",
+  icon: "border border-white/15 text-slate-200 hover:border-white/30 hover:text-white p-2",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
@@ -36,7 +37,7 @@ export default function Button({
       className={cn(
         "inline-flex items-center justify-center rounded-full font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 cursor-pointer",
         variantClasses[variant],
-        sizeClasses[size],
+        variant !== "icon" && sizeClasses[size],
         className
       )}
       {...props}
