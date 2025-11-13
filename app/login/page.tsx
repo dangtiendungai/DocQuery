@@ -1,7 +1,70 @@
+"use client";
+
+import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import TextField from "@/components/ui/TextField";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      const { data, error: signInError } =
+        await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+
+      if (signInError) {
+        setError(
+          signInError.message ||
+            "Failed to sign in. Please check your credentials."
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (data.user) {
+        // Redirect to chats page or home after successful login
+        const redirectTo =
+          process.env.NEXT_PUBLIC_POST_LOGIN_REDIRECT || "/chats";
+        router.push(redirectTo);
+        router.refresh();
+      }
+    } catch (err) {
+      setError("An unexpected error occurred. Please try again.");
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (oauthError) {
+        setError(oauthError.message || "Failed to sign in with Google.");
+      }
+    } catch (err) {
+      setError("An unexpected error occurred. Please try again.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 px-6 py-16 text-slate-100 lg:px-0">
       <div className="mx-auto flex max-w-5xl flex-col gap-16 lg:flex-row">
@@ -43,12 +106,21 @@ export default function LoginPage() {
                 Create an account
               </a>
             </p>
-            <form className="mt-8 space-y-6">
+            <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+              {error && (
+                <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                  {error}
+                </div>
+              )}
               <TextField
                 id="email"
                 type="email"
                 label="Work email"
                 placeholder="you@company.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={isSubmitting}
               />
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -71,16 +143,23 @@ export default function LoginPage() {
                   placeholder="Enter your password"
                   label="Password"
                   hideLabel
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={isSubmitting}
                 />
               </div>
-              <Button type="submit" className="w-full">
-                Sign in
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? "Signing in..." : "Sign in"}
               </Button>
             </form>
             <div className="mt-6 space-y-4">
               <Button
+                type="button"
                 variant="subtle"
                 className="flex w-full items-center justify-center gap-3"
+                onClick={handleGoogleSignIn}
+                disabled={isSubmitting}
               >
                 <span>Continue with Google</span>
               </Button>
