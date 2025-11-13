@@ -1,3 +1,5 @@
+import Button from "@/components/ui/Button";
+
 const tiers = [
   {
     name: "Starter",
@@ -108,15 +110,16 @@ export default function PricingPage() {
                   </span>
                 </p>
               </div>
-              <button
-                className={`mt-6 rounded-full px-6 py-3 text-sm font-semibold transition ${
+              <Button
+                className={
                   tier.highlighted
-                    ? "bg-emerald-400 text-slate-950 hover:bg-emerald-300"
-                    : "border border-white/15 text-white hover:border-white/25 hover:bg-white/10"
-                }`}
+                    ? "mt-6"
+                    : "mt-6 border-white/15 hover:border-white/25 hover:bg-white/10"
+                }
+                variant={tier.highlighted ? "primary" : "subtle"}
               >
                 {tier.cta}
-              </button>
+              </Button>
               <ul className="mt-8 space-y-3 text-sm text-slate-200">
                 {tier.features.map((feature) => (
                   <li key={feature} className="flex items-start gap-2">
@@ -139,9 +142,9 @@ export default function PricingPage() {
               product teams. We can advise on retrieval strategies, guardrails,
               and compliance requirements.
             </p>
-            <button className="inline-flex items-center justify-center rounded-full bg-emerald-400 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300">
+            <Button className="inline-flex items-center justify-center">
               Talk to sales
-            </button>
+            </Button>
           </div>
           <div className="space-y-4 text-sm text-slate-300">
             {faqs.map((faq) => (

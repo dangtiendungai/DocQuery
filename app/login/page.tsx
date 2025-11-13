@@ -1,3 +1,6 @@
+import Button from "@/components/ui/Button";
+import TextField from "@/components/ui/TextField";
+
 export default function LoginPage() {
   return (
     <div className="min-h-screen bg-slate-950 px-6 py-16 text-slate-100 lg:px-0">
@@ -41,21 +44,13 @@ export default function LoginPage() {
               </a>
             </p>
             <form className="mt-8 space-y-6">
-              <div>
-                <label
-                  className="text-sm font-medium text-slate-200"
-                  htmlFor="email"
-                >
-                  Work email
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  placeholder="you@company.com"
-                  className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/50"
-                />
-              </div>
-              <div>
+              <TextField
+                id="email"
+                type="email"
+                label="Work email"
+                placeholder="you@company.com"
+              />
+              <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label
                     className="text-sm font-medium text-slate-200"
@@ -70,24 +65,25 @@ export default function LoginPage() {
                     Forgot?
                   </a>
                 </div>
-                <input
+                <TextField
                   id="password"
                   type="password"
                   placeholder="Enter your password"
-                  className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/50"
+                  label="Password"
+                  hideLabel
                 />
               </div>
-              <button
-                type="submit"
-                className="w-full rounded-full bg-emerald-400 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
-              >
+              <Button type="submit" className="w-full">
                 Sign in
-              </button>
+              </Button>
             </form>
             <div className="mt-6 space-y-4">
-              <button className="flex w-full items-center justify-center gap-3 rounded-full border border-white/10 bg-white/10 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/20 hover:bg-white/15">
+              <Button
+                variant="subtle"
+                className="flex w-full items-center justify-center gap-3"
+              >
                 <span>Continue with Google</span>
-              </button>
+              </Button>
               <p className="text-xs text-slate-400">
                 By signing in you agree to our{" "}
                 <a className="text-emerald-300 hover:text-emerald-200" href="#">

@@ -1,3 +1,6 @@
+import Button from "@/components/ui/Button";
+import TextField from "@/components/ui/TextField";
+
 export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-slate-950 px-6 py-16 text-slate-100 lg:px-0">
@@ -18,99 +21,48 @@ export default function RegisterPage() {
             </p>
             <form className="mt-8 space-y-6">
               <div className="grid gap-6 sm:grid-cols-2">
-                <div>
-                  <label
-                    className="text-sm font-medium text-slate-200"
-                    htmlFor="firstName"
-                  >
-                    First name
-                  </label>
-                  <input
-                    id="firstName"
-                    type="text"
-                    placeholder="Ada"
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/50"
-                  />
-                </div>
-                <div>
-                  <label
-                    className="text-sm font-medium text-slate-200"
-                    htmlFor="lastName"
-                  >
-                    Last name
-                  </label>
-                  <input
-                    id="lastName"
-                    type="text"
-                    placeholder="Lovelace"
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/50"
-                  />
-                </div>
-              </div>
-              <div>
-                <label
-                  className="text-sm font-medium text-slate-200"
-                  htmlFor="company"
-                >
-                  Company or team
-                </label>
-                <input
-                  id="company"
+                <TextField
+                  id="firstName"
                   type="text"
-                  placeholder="Acme Robotics"
-                  className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/50"
+                  label="First name"
+                  placeholder="Ada"
+                />
+                <TextField
+                  id="lastName"
+                  type="text"
+                  label="Last name"
+                  placeholder="Lovelace"
                 />
               </div>
-              <div>
-                <label
-                  className="text-sm font-medium text-slate-200"
-                  htmlFor="email"
-                >
-                  Work email
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  placeholder="you@company.com"
-                  className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/50"
-                />
-              </div>
+              <TextField
+                id="company"
+                type="text"
+                label="Company or team"
+                placeholder="Acme Robotics"
+              />
+              <TextField
+                id="email"
+                type="email"
+                label="Work email"
+                placeholder="you@company.com"
+              />
               <div className="grid gap-6 sm:grid-cols-2">
-                <div>
-                  <label
-                    className="text-sm font-medium text-slate-200"
-                    htmlFor="password"
-                  >
-                    Password
-                  </label>
-                  <input
-                    id="password"
-                    type="password"
-                    placeholder="Create a password"
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/50"
-                  />
-                </div>
-                <div>
-                  <label
-                    className="text-sm font-medium text-slate-200"
-                    htmlFor="confirmPassword"
-                  >
-                    Confirm password
-                  </label>
-                  <input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="Repeat password"
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/50"
-                  />
-                </div>
+                <TextField
+                  id="password"
+                  type="password"
+                  label="Password"
+                  placeholder="Create a password"
+                />
+                <TextField
+                  id="confirmPassword"
+                  type="password"
+                  label="Confirm password"
+                  placeholder="Repeat password"
+                />
               </div>
-              <button
-                type="submit"
-                className="w-full rounded-full bg-emerald-400 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
-              >
+              <Button type="submit" className="w-full">
                 Create account
-              </button>
+              </Button>
               <div className="flex items-center gap-3 text-xs text-slate-400">
                 <input
                   type="checkbox"

@@ -1,3 +1,4 @@
+import Button from "@/components/ui/Button";
 import { FileUp, Lock, ShieldCheck, UploadCloud } from "lucide-react";
 
 const features = [
@@ -103,12 +104,13 @@ export default function Home() {
               inside your files.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <button className="inline-flex items-center justify-center rounded-full bg-emerald-400 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300">
-                Upload your first docs
-              </button>
-              <button className="inline-flex items-center justify-center rounded-full border border-slate-700 px-6 py-3 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white">
+              <Button className="rounded-full">Upload your first docs</Button>
+              <Button
+                variant="outline"
+                className="rounded-full border border-slate-700 text-slate-200 hover:border-slate-500 hover:text-white"
+              >
                 Watch 2-min overview
-              </button>
+              </Button>
             </div>
           </div>
           <div className="grid grid-cols-1 gap-4 text-sm text-slate-300 sm:grid-cols-3 sm:text-left lg:max-w-md">
@@ -179,9 +181,12 @@ export default function Home() {
                 <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-300">
                   Recent uploads
                 </h3>
-                <button className="text-xs font-medium text-emerald-200 hover:text-emerald-100">
+                <Button
+                  variant="link"
+                  className="text-xs font-medium text-emerald-200 hover:text-emerald-100"
+                >
                   View all
-                </button>
+                </Button>
               </div>
               <div className="space-y-3">
                 {uploads.map((item) => (
@@ -216,9 +221,13 @@ export default function Home() {
                     conversation.
                   </p>
                 </div>
-                <button className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-white/30 hover:text-white">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-full border-white/10 text-slate-200 hover:border-white/30 hover:text-white"
+                >
                   Launch playground
-                </button>
+                </Button>
               </div>
 
               <div className="mt-6 space-y-4 text-sm">

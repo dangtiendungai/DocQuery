@@ -1,3 +1,5 @@
+import Button from "@/components/ui/Button";
+
 const conversations = [
   {
     title: "Refund policy launch",
@@ -43,9 +45,7 @@ export default function ChatsPage() {
               Keep every retrieval session grounded and shareable across teams.
             </p>
           </div>
-          <button className="w-full rounded-full bg-emerald-400 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300">
-            New chat
-          </button>
+          <Button className="w-full rounded-full">New chat</Button>
 
           <div className="rounded-3xl border border-white/10 bg-slate-900/70 p-5 backdrop-blur">
             <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-300">
@@ -53,20 +53,21 @@ export default function ChatsPage() {
             </h2>
             <div className="mt-4 space-y-3">
               {conversations.map((conversation) => (
-                <button
+                <Button
                   key={conversation.title}
-                  className="block w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm text-slate-200 transition hover:border-white/20 hover:bg-white/10"
+                  variant="subtle"
+                  className="!flex w-full flex-col items-start gap-1 !rounded-2xl border-white/10 bg-white/5 px-4 py-3 text-left text-sm text-slate-200 hover:border-white/20 hover:bg-white/10"
                 >
                   <p className="font-semibold text-white">
                     {conversation.title}
                   </p>
-                  <p className="mt-1 text-xs text-slate-400">
+                  <p className="text-xs text-slate-400">
                     {conversation.description}
                   </p>
-                  <span className="mt-2 inline-flex items-center rounded-full bg-emerald-500/15 px-2 py-1 text-[11px] font-medium text-emerald-200">
+                  <span className="mt-1 inline-flex items-center rounded-full bg-emerald-500/15 px-2 py-1 text-[11px] font-medium text-emerald-200">
                     {conversation.status}
                   </span>
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -100,9 +101,13 @@ export default function ChatsPage() {
                   policies. Follow-ups stay contextualized.
                 </p>
               </div>
-              <button className="rounded-full border border-white/15 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-white/30 hover:text-white">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="rounded-full border-white/15 text-slate-200 hover:border-white/30 hover:text-white"
+              >
                 Manage sources
-              </button>
+              </Button>
             </div>
 
             <div className="mt-6 rounded-2xl border border-white/10 bg-slate-950/80 p-4 text-sm text-slate-300">
@@ -148,9 +153,9 @@ export default function ChatsPage() {
                 placeholder="Ask DocQuery anything about your knowledge base..."
                 className="min-h-[120px] flex-1 rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
               />
-              <button className="rounded-2xl bg-emerald-400 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300">
+              <Button className="rounded-2xl bg-emerald-400 text-slate-950 hover:bg-emerald-300 sm:self-start">
                 Send
-              </button>
+              </Button>
             </div>
           </section>
 
