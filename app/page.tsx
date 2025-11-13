@@ -1,5 +1,10 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Button from "@/components/ui/Button";
-import { Bot, FileUp, Lock, ShieldCheck, UploadCloud } from "lucide-react";
+import FileUpload from "@/components/ui/FileUpload";
+import { Bot, FileUp, Lock, ShieldCheck } from "lucide-react";
+import { supabase } from "@/lib/supabaseClient";
 
 const features = [
   {
@@ -63,25 +68,60 @@ const messages = [
   },
 ];
 
-const uploads = [
-  {
-    name: "Warranty & Returns.pdf",
-    size: "2.3 MB",
-    status: "Processed • 142 chunks",
-  },
-  {
-    name: "Support Playbook.md",
-    size: "326 KB",
-    status: "Processed • 64 chunks",
-  },
-  {
-    name: "Onboarding_Checklist.txt",
-    size: "89 KB",
-    status: "Processing… 38%",
-  },
-];
+interface Document {
+  id: string;
+  name: string;
+  file_size: number;
+  chunk_count: number;
+  status: string;
+  created_at: string;
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 export default function Home() {
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchDocuments = async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch("/api/documents", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setDocuments(data.documents || []);
+      }
+    } catch (error) {
+      console.error("Error fetching documents:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
+
+  const handleUploadComplete = () => {
+    fetchDocuments();
+  };
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
       <div className="pointer-events-none absolute inset-0">
@@ -151,21 +191,8 @@ export default function Home() {
                 </span>
               </div>
 
-              <div className="mt-6 rounded-2xl border-2 border-dashed border-white/15 bg-slate-950/50 p-10 text-center">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5">
-                  <UploadCloud
-                    className="h-8 w-8 text-emerald-300"
-                    aria-hidden="true"
-                  />
-                </div>
-                <div className="mt-6 space-y-2">
-                  <p className="text-lg font-semibold text-white">
-                    Drag & drop files or click to browse
-                  </p>
-                  <p className="text-sm text-slate-400">
-                    Supports PDF, DOCX, TXT, HTML (max 50 MB per upload)
-                  </p>
-                </div>
+              <div className="mt-6">
+                <FileUpload onUploadComplete={handleUploadComplete} />
                 <div className="mt-6 flex flex-col items-center justify-center gap-2 text-xs text-slate-400 sm:flex-row">
                   <span className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1">
                     <span className="h-2 w-2 rounded-full bg-emerald-400" />
@@ -189,22 +216,34 @@ export default function Home() {
                 </Button>
               </div>
               <div className="space-y-3">
-                {uploads.map((item) => (
-                  <div
-                    key={item.name}
-                    className="flex items-center justify-between rounded-2xl border border-white/5 bg-slate-900/60 px-4 py-3"
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-white">
-                        {item.name}
-                      </p>
-                      <p className="text-xs text-slate-400">{item.size}</p>
+                {loading ? (
+                  <p className="text-sm text-slate-400">Loading documents...</p>
+                ) : documents.length === 0 ? (
+                  <p className="text-sm text-slate-400">
+                    No documents yet. Upload your first file above!
+                  </p>
+                ) : (
+                  documents.map((doc) => (
+                    <div
+                      key={doc.id}
+                      className="flex items-center justify-between rounded-2xl border border-white/5 bg-slate-900/60 px-4 py-3"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-white">
+                          {doc.name}
+                        </p>
+                        <p className="text-xs text-slate-400">
+                          {formatFileSize(doc.file_size)}
+                        </p>
+                      </div>
+                      <span className="text-xs font-medium text-slate-300">
+                        {doc.status === "processed"
+                          ? `Processed • ${doc.chunk_count} chunks`
+                          : doc.status}
+                      </span>
                     </div>
-                    <span className="text-xs font-medium text-slate-300">
-                      {item.status}
-                    </span>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           </div>
