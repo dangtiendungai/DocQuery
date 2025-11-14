@@ -44,7 +44,6 @@ export default async function Image() {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "20px",
             }}
           >
             <span style={{ fontSize: 72, fontWeight: 700 }}>Doc</span>
