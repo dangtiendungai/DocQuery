@@ -10,10 +10,11 @@ import {
   ArrowLeft,
   User,
   Mail,
-  Building,
   Save,
   Loader2,
   CheckCircle2,
+  Lock,
+  X,
 } from "lucide-react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
@@ -23,6 +24,15 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<{
+    type: "idle" | "success" | "error";
+    message: string | null;
+  }>({ type: "idle", message: null });
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordStatus, setPasswordStatus] = useState<{
     type: "idle" | "success" | "error";
     message: string | null;
   }>({ type: "idle", message: null });
@@ -63,6 +73,24 @@ export default function ProfilePage() {
 
     fetchUser();
   }, [router]);
+
+  // Handle Escape key to close password modal
+  useEffect(() => {
+    if (!showChangePassword) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !changingPassword) {
+        setShowChangePassword(false);
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+        setPasswordStatus({ type: "idle", message: null });
+      }
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [showChangePassword, changingPassword]);
 
   const handleSave = async () => {
     if (!user) return;
@@ -112,6 +140,91 @@ export default function ProfilePage() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordStatus({ type: "idle", message: null });
+
+    // Validation
+    if (!currentPassword) {
+      setPasswordStatus({
+        type: "error",
+        message: "Please enter your current password",
+      });
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setPasswordStatus({
+        type: "error",
+        message: "New password must be at least 8 characters long",
+      });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordStatus({
+        type: "error",
+        message: "New passwords do not match",
+      });
+      return;
+    }
+
+    setChangingPassword(true);
+
+    try {
+      // First, verify current password by attempting to sign in
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: currentPassword,
+      });
+
+      if (signInError) {
+        setPasswordStatus({
+          type: "error",
+          message: "Current password is incorrect",
+        });
+        setChangingPassword(false);
+        return;
+      }
+
+      // If current password is correct, update to new password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (updateError) {
+        setPasswordStatus({
+          type: "error",
+          message: updateError.message || "Failed to update password",
+        });
+        setChangingPassword(false);
+        return;
+      }
+
+      setPasswordStatus({
+        type: "success",
+        message: "Password changed successfully!",
+      });
+
+      // Clear form
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+
+      // Close modal after 2 seconds
+      setTimeout(() => {
+        setShowChangePassword(false);
+        setPasswordStatus({ type: "idle", message: null });
+      }, 2000);
+    } catch (error) {
+      setPasswordStatus({
+        type: "error",
+        message: "An unexpected error occurred. Please try again.",
+      });
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -276,14 +389,14 @@ export default function ProfilePage() {
                 Security
               </h2>
               <div className="space-y-3">
-                <Link href="/forgot-password">
-                  <Button
-                    variant="outline"
-                    className="w-full rounded-full sm:w-auto"
-                  >
-                    Change password
-                  </Button>
-                </Link>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowChangePassword(true)}
+                  className="w-full rounded-full sm:w-auto"
+                >
+                  <Lock className="mr-2 h-4 w-4" />
+                  Change password
+                </Button>
                 {!user.email_confirmed_at && (
                   <Link href="/verify-email">
                     <Button
@@ -298,6 +411,141 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+
+        {/* Change Password Modal */}
+        {showChangePassword && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => {
+                setShowChangePassword(false);
+                setCurrentPassword("");
+                setNewPassword("");
+                setConfirmPassword("");
+                setPasswordStatus({ type: "idle", message: null });
+              }}
+            />
+
+            {/* Modal */}
+            <div className="relative z-10 w-full max-w-md rounded-3xl border border-white/10 bg-slate-900 shadow-2xl">
+              <div className="flex items-center justify-between border-b border-white/10 p-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/20">
+                    <Lock className="h-5 w-5 text-emerald-300" />
+                  </div>
+                  <h2 className="text-lg font-semibold text-white">
+                    Change Password
+                  </h2>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowChangePassword(false);
+                    setCurrentPassword("");
+                    setNewPassword("");
+                    setConfirmPassword("");
+                    setPasswordStatus({ type: "idle", message: null });
+                  }}
+                  className="rounded-lg p-1 text-slate-400 transition hover:bg-white/10 hover:text-white"
+                  aria-label="Close"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="p-6">
+                {passwordStatus.type !== "idle" && passwordStatus.message && (
+                  <div
+                    className={`mb-4 rounded-2xl border px-4 py-3 ${
+                      passwordStatus.type === "success"
+                        ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-100"
+                        : "border-red-400/40 bg-red-500/10 text-red-100"
+                    }`}
+                  >
+                    {passwordStatus.type === "success" && (
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span>{passwordStatus.message}</span>
+                      </div>
+                    )}
+                    {passwordStatus.type === "error" && (
+                      <span>{passwordStatus.message}</span>
+                    )}
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  <TextField
+                    id="currentPassword"
+                    type="password"
+                    label="Current password"
+                    placeholder="Enter your current password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    disabled={changingPassword}
+                    autoComplete="current-password"
+                  />
+
+                  <TextField
+                    id="newPassword"
+                    type="password"
+                    label="New password"
+                    placeholder="Enter your new password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    disabled={changingPassword}
+                    autoComplete="new-password"
+                  />
+
+                  <TextField
+                    id="confirmPassword"
+                    type="password"
+                    label="Confirm new password"
+                    placeholder="Confirm your new password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    disabled={changingPassword}
+                    autoComplete="new-password"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 border-t border-white/10 p-6">
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setShowChangePassword(false);
+                    setCurrentPassword("");
+                    setNewPassword("");
+                    setConfirmPassword("");
+                    setPasswordStatus({ type: "idle", message: null });
+                  }}
+                  disabled={changingPassword}
+                  className="rounded-full"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleChangePassword}
+                  disabled={changingPassword}
+                  className="rounded-full"
+                >
+                  {changingPassword ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Changing...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Change password
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
