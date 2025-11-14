@@ -40,10 +40,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Query is required" }, { status: 400 });
     }
 
-    // First, get processed documents
+    // First, get processed documents for this user
     const { data: processedDocs, error: docsError } = await supabase
       .from("documents")
       .select("id, name, file_type")
+      .eq("user_id", user.id)
       .eq("status", "processed");
 
     if (docsError) {
@@ -76,25 +77,48 @@ export async function POST(request: NextRequest) {
         const queryEmbedding = await generateEmbedding(query);
 
         // Use vector similarity search with pgvector
-        const { data: vectorChunks, error: vectorError } = await supabase.rpc(
-          "match_document_chunks",
-          {
+        // Try with user_id_filter first (newer version), fall back if it fails
+        let vectorChunks: any[] | null = null;
+        let vectorError: any = null;
+
+        try {
+          const result = await supabase.rpc("match_document_chunks", {
             query_embedding: queryEmbedding,
             match_threshold: 0.7,
             match_count: limit,
             document_ids: docIds,
+            user_id_filter: user.id,
+          });
+          vectorChunks = result.data;
+          vectorError = result.error;
+        } catch (rpcError) {
+          // If RPC fails (e.g., function doesn't accept user_id_filter), try without it
+          console.log("RPC with user_id_filter failed, trying without it");
+          try {
+            const result = await supabase.rpc("match_document_chunks", {
+              query_embedding: queryEmbedding,
+              match_threshold: 0.7,
+              match_count: limit,
+              document_ids: docIds,
+            });
+            vectorChunks = result.data;
+            vectorError = result.error;
+          } catch (fallbackError) {
+            console.log("RPC function not available, using direct SQL query");
+            vectorError = fallbackError;
           }
-        );
+        }
 
         if (!vectorError && vectorChunks && vectorChunks.length > 0) {
           // RPC function returns chunks with similarity score
           chunks = vectorChunks;
         } else {
-          // If RPC function doesn't exist, use direct SQL query
-          console.log("RPC function not found, using direct SQL query");
+          // If RPC function doesn't exist or failed, use direct SQL query
+          console.log("Using direct SQL query for vector search");
           const { data: sqlChunks, error: sqlError } = await supabase
             .from("document_chunks")
             .select("id, content, chunk_index, document_id, embedding")
+            .eq("user_id", user.id)
             .in("document_id", docIds)
             .not("embedding", "is", null)
             .limit(limit * 2); // Get more to filter by similarity
@@ -131,6 +155,7 @@ export async function POST(request: NextRequest) {
       const { data: textChunks, error: textError } = await supabase
         .from("document_chunks")
         .select("id, content, chunk_index, document_id")
+        .eq("user_id", user.id)
         .in("document_id", docIds)
         .ilike("content", `%${searchQuery}%`)
         .order("chunk_index", { ascending: true })

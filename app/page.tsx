@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
-import FileUpload from "@/components/ui/FileUpload";
+import FileUpload from "@/components/documents/FileUpload";
 import { Bot, FileUp, Lock, ShieldCheck } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
