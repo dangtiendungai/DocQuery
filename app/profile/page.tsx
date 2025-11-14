@@ -15,7 +15,14 @@ import {
   CheckCircle2,
   Lock,
   X,
+  Crown,
+  Calendar,
+  CreditCard,
+  Settings,
+  Shield,
+  RefreshCw,
 } from "lucide-react";
+import Tabs from "@/components/ui/Tabs";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 export default function ProfilePage() {
@@ -42,6 +49,8 @@ export default function ProfilePage() {
   const [lastName, setLastName] = useState("");
   const [company, setCompany] = useState("");
   const [email, setEmail] = useState("");
+  const [subscription, setSubscription] = useState<any>(null);
+  const [loadingSubscription, setLoadingSubscription] = useState(true);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -63,6 +72,9 @@ export default function ProfilePage() {
         setFirstName(metadata.first_name || "");
         setLastName(metadata.last_name || "");
         setCompany(metadata.company || "");
+
+        // Fetch subscription
+        await fetchSubscription();
       } catch (error) {
         console.error("Error fetching user:", error);
         router.push("/login");
@@ -73,6 +85,39 @@ export default function ProfilePage() {
 
     fetchUser();
   }, [router]);
+
+  const fetchSubscription = async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        setLoadingSubscription(false);
+        return;
+      }
+
+      const response = await fetch("/api/subscriptions", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSubscription(data.subscription);
+      }
+    } catch (error) {
+      console.error("Error fetching subscription:", error);
+    } finally {
+      setLoadingSubscription(false);
+    }
+  };
+
+  const handleRefreshSubscription = async () => {
+    setLoadingSubscription(true);
+    await fetchSubscription();
+  };
 
   // Handle Escape key to close password modal
   useEffect(() => {
@@ -268,148 +313,353 @@ export default function ProfilePage() {
             </p>
           </div>
 
-          <div className="space-y-6">
-            {/* Status Messages */}
-            {status.type !== "idle" && status.message && (
-              <div
-                className={`rounded-2xl border px-4 py-3 ${
-                  status.type === "success"
-                    ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-100"
-                    : "border-red-400/40 bg-red-500/10 text-red-100"
-                }`}
-              >
-                {status.type === "success" && (
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span>{status.message}</span>
+          <Tabs
+            tabs={[
+              {
+                id: "profile",
+                label: "Profile",
+                icon: <Settings className="h-4 w-4" />,
+              },
+              {
+                id: "security",
+                label: "Security",
+                icon: <Shield className="h-4 w-4" />,
+              },
+              {
+                id: "membership",
+                label: "Membership",
+                icon: <Crown className="h-4 w-4" />,
+              },
+            ]}
+            defaultTab="profile"
+          >
+            {(activeTab) => (
+              <>
+                {/* Status Messages */}
+                {status.type !== "idle" && status.message && (
+                  <div
+                    className={`mb-6 rounded-2xl border px-4 py-3 ${
+                      status.type === "success"
+                        ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-100"
+                        : "border-red-400/40 bg-red-500/10 text-red-100"
+                    }`}
+                  >
+                    {status.type === "success" && (
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span>{status.message}</span>
+                      </div>
+                    )}
+                    {status.type === "error" && <span>{status.message}</span>}
                   </div>
                 )}
-                {status.type === "error" && <span>{status.message}</span>}
-              </div>
-            )}
 
-            {/* Account Information */}
-            <div className="rounded-2xl border border-white/10 bg-slate-950/80 p-6">
-              <h2 className="mb-4 text-lg font-semibold text-white">
-                Account Information
-              </h2>
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-slate-900/60 px-4 py-3">
-                  <Mail className="h-5 w-5 text-slate-400" />
-                  <div className="flex-1">
-                    <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
-                      Email
-                    </p>
-                    <p className="mt-1 text-sm text-white">{email}</p>
+                {activeTab === "membership" && (
+                  <div className="rounded-2xl border border-white/10 bg-slate-950/80 p-6">
+                    <div className="mb-4 flex items-center justify-between">
+                      <h2 className="text-lg font-semibold text-white">
+                        Membership
+                      </h2>
+                      <div className="flex items-center gap-3">
+                        <Button
+                          variant="icon"
+                          size="sm"
+                          onClick={handleRefreshSubscription}
+                          disabled={loadingSubscription}
+                          className="rounded-full"
+                          aria-label="Refresh subscription"
+                        >
+                          <RefreshCw
+                            className={`h-4 w-4 ${
+                              loadingSubscription ? "animate-spin" : ""
+                            }`}
+                          />
+                        </Button>
+                        {subscription && (
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-medium ${
+                              subscription.status === "active"
+                                ? "bg-emerald-500/20 text-emerald-300"
+                                : subscription.status === "trialing"
+                                ? "bg-blue-500/20 text-blue-300"
+                                : subscription.status === "past_due"
+                                ? "bg-amber-500/20 text-amber-300"
+                                : "bg-red-500/20 text-red-300"
+                            }`}
+                          >
+                            {subscription.status === "active"
+                              ? "Active"
+                              : subscription.status === "trialing"
+                              ? "Trial"
+                              : subscription.status === "past_due"
+                              ? "Past Due"
+                              : "Inactive"}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {loadingSubscription ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-emerald-400" />
+                      </div>
+                    ) : subscription ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-slate-900/60 px-4 py-3">
+                          <Crown className="h-5 w-5 text-emerald-400" />
+                          <div className="flex-1">
+                            <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
+                              Current Plan
+                            </p>
+                            <p className="mt-1 text-sm font-semibold capitalize text-white">
+                              {subscription.plan}
+                            </p>
+                          </div>
+                        </div>
+
+                        {subscription.current_period_end && (
+                          <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-slate-900/60 px-4 py-3">
+                            <Calendar className="h-5 w-5 text-slate-400" />
+                            <div className="flex-1">
+                              <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
+                                {subscription.cancel_at_period_end
+                                  ? "Cancels On"
+                                  : "Renews On"}
+                              </p>
+                              <p className="mt-1 text-sm text-white">
+                                {new Date(
+                                  subscription.current_period_end
+                                ).toLocaleDateString("en-US", {
+                                  year: "numeric",
+                                  month: "long",
+                                  day: "numeric",
+                                })}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {subscription.cancel_at_period_end && (
+                          <div className="rounded-xl border border-amber-400/40 bg-amber-500/10 px-4 py-3">
+                            <p className="text-sm text-amber-200">
+                              Your subscription will cancel at the end of the
+                              current billing period.
+                            </p>
+                          </div>
+                        )}
+
+                        <div className="flex flex-col gap-2 sm:flex-row">
+                          <Button
+                            variant="outline"
+                            onClick={() => router.push("/pricing")}
+                            className="w-full rounded-full sm:w-auto"
+                          >
+                            <CreditCard className="mr-2 h-4 w-4" />
+                            {subscription.cancel_at_period_end
+                              ? "Reactivate Subscription"
+                              : "Manage Subscription"}
+                          </Button>
+                          {!subscription.cancel_at_period_end &&
+                            subscription.plan !== "enterprise" && (
+                              <Button
+                                variant="subtle"
+                                onClick={() => router.push("/pricing")}
+                                className="w-full rounded-full sm:w-auto"
+                              >
+                                Upgrade Plan
+                              </Button>
+                            )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="rounded-xl border border-white/10 bg-slate-900/60 px-4 py-3">
+                          <p className="text-sm text-slate-300">
+                            You're currently on the free plan. Upgrade to unlock
+                            premium features.
+                          </p>
+                        </div>
+                        <Button
+                          onClick={() => router.push("/pricing")}
+                          className="w-full rounded-full sm:w-auto"
+                        >
+                          <Crown className="mr-2 h-4 w-4" />
+                          View Plans
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                  <span className="rounded-full bg-emerald-500/20 px-2 py-1 text-xs font-medium text-emerald-300">
-                    {user.email_confirmed_at ? "Verified" : "Unverified"}
-                  </span>
-                </div>
+                )}
 
-                {user.created_at && (
-                  <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-slate-900/60 px-4 py-3">
-                    <User className="h-5 w-5 text-slate-400" />
-                    <div className="flex-1">
-                      <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
-                        Member Since
-                      </p>
-                      <p className="mt-1 text-sm text-white">
-                        {new Date(user.created_at).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
-                      </p>
+                {activeTab === "profile" && (
+                  <div className="space-y-6">
+                    {/* Account Information */}
+                    <div className="rounded-2xl border border-white/10 bg-slate-950/80 p-6">
+                      <h2 className="mb-4 text-lg font-semibold text-white">
+                        Account Information
+                      </h2>
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-slate-900/60 px-4 py-3">
+                          <Mail className="h-5 w-5 text-slate-400" />
+                          <div className="flex-1">
+                            <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
+                              Email
+                            </p>
+                            <p className="mt-1 text-sm text-white">{email}</p>
+                          </div>
+                          <span className="rounded-full bg-emerald-500/20 px-2 py-1 text-xs font-medium text-emerald-300">
+                            {user.email_confirmed_at
+                              ? "Verified"
+                              : "Unverified"}
+                          </span>
+                        </div>
+
+                        {user.created_at && (
+                          <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-slate-900/60 px-4 py-3">
+                            <User className="h-5 w-5 text-slate-400" />
+                            <div className="flex-1">
+                              <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
+                                Member Since
+                              </p>
+                              <p className="mt-1 text-sm text-white">
+                                {new Date(user.created_at).toLocaleDateString(
+                                  "en-US",
+                                  {
+                                    year: "numeric",
+                                    month: "long",
+                                    day: "numeric",
+                                  }
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Profile Details */}
+                    <div className="rounded-2xl border border-white/10 bg-slate-950/80 p-6">
+                      <h2 className="mb-4 text-lg font-semibold text-white">
+                        Profile Details
+                      </h2>
+                      <div className="space-y-4">
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <TextField
+                            id="firstName"
+                            label="First name"
+                            placeholder="Enter your first name"
+                            value={firstName}
+                            onChange={(e) => setFirstName(e.target.value)}
+                            disabled={saving}
+                          />
+                          <TextField
+                            id="lastName"
+                            label="Last name"
+                            placeholder="Enter your last name"
+                            value={lastName}
+                            onChange={(e) => setLastName(e.target.value)}
+                            disabled={saving}
+                          />
+                        </div>
+                        <TextField
+                          id="company"
+                          label="Company or team"
+                          placeholder="Enter your company name"
+                          value={company}
+                          onChange={(e) => setCompany(e.target.value)}
+                          disabled={saving}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                      <Button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="rounded-full"
+                      >
+                        {saving ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="mr-2 h-4 w-4" />
+                            Save changes
+                          </>
+                        )}
+                      </Button>
                     </div>
                   </div>
                 )}
-              </div>
-            </div>
 
-            {/* Profile Details */}
-            <div className="rounded-2xl border border-white/10 bg-slate-950/80 p-6">
-              <h2 className="mb-4 text-lg font-semibold text-white">
-                Profile Details
-              </h2>
-              <div className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <TextField
-                    id="firstName"
-                    label="First name"
-                    placeholder="Enter your first name"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    disabled={saving}
-                  />
-                  <TextField
-                    id="lastName"
-                    label="Last name"
-                    placeholder="Enter your last name"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    disabled={saving}
-                  />
-                </div>
-                <TextField
-                  id="company"
-                  label="Company or team"
-                  placeholder="Enter your company name"
-                  value={company}
-                  onChange={(e) => setCompany(e.target.value)}
-                  disabled={saving}
-                />
-              </div>
-            </div>
+                {activeTab === "security" && (
+                  <div className="rounded-2xl border border-white/10 bg-slate-950/80 p-6">
+                    <h2 className="mb-4 text-lg font-semibold text-white">
+                      Security Settings
+                    </h2>
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-slate-900/60 px-4 py-3">
+                        <Mail className="h-5 w-5 text-slate-400" />
+                        <div className="flex-1">
+                          <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
+                            Email Verification
+                          </p>
+                          <p className="mt-1 text-sm text-white">
+                            {user.email_confirmed_at
+                              ? "Your email is verified"
+                              : "Your email is not verified"}
+                          </p>
+                        </div>
+                        {!user.email_confirmed_at && (
+                          <Link href="/verify-email">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="rounded-full"
+                            >
+                              Verify Email
+                            </Button>
+                          </Link>
+                        )}
+                      </div>
 
-            {/* Actions */}
-            <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-              <Button
-                onClick={handleSave}
-                disabled={saving}
-                className="rounded-full"
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save changes
-                  </>
+                      <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-slate-900/60 px-4 py-3">
+                        <Lock className="h-5 w-5 text-slate-400" />
+                        <div className="flex-1">
+                          <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
+                            Password
+                          </p>
+                          <p className="mt-1 text-sm text-white">
+                            Last updated:{" "}
+                            {user.updated_at
+                              ? new Date(user.updated_at).toLocaleDateString(
+                                  "en-US",
+                                  {
+                                    year: "numeric",
+                                    month: "long",
+                                    day: "numeric",
+                                  }
+                                )
+                              : "Never"}
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowChangePassword(true)}
+                          size="sm"
+                          className="rounded-full"
+                        >
+                          Change Password
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 )}
-              </Button>
-            </div>
-
-            {/* Security Section */}
-            <div className="mt-8 rounded-2xl border border-white/10 bg-slate-950/80 p-6">
-              <h2 className="mb-4 text-lg font-semibold text-white">
-                Security
-              </h2>
-              <div className="space-y-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowChangePassword(true)}
-                  className="w-full rounded-full sm:w-auto"
-                >
-                  <Lock className="mr-2 h-4 w-4" />
-                  Change password
-                </Button>
-                {!user.email_confirmed_at && (
-                  <Link href="/verify-email">
-                    <Button
-                      variant="outline"
-                      className="w-full rounded-full sm:w-auto"
-                    >
-                      Verify email address
-                    </Button>
-                  </Link>
-                )}
-              </div>
-            </div>
-          </div>
+              </>
+            )}
+          </Tabs>
         </div>
 
         {/* Change Password Modal */}

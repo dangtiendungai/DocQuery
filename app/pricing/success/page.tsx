@@ -2,8 +2,10 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "react-toastify";
 import Button from "@/components/ui/Button";
 import { CheckCircle2, Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabaseClient";
 
 function PricingSuccessContent() {
   const router = useRouter();
@@ -11,22 +13,77 @@ function PricingSuccessContent() {
   const sessionId = searchParams.get("session_id");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
-    if (sessionId) {
-      // Verify the session was successful
-      // In a real app, you might want to verify this with your backend
-      setLoading(false);
-    } else {
-      setError("No session ID provided");
-      setLoading(false);
-    }
+    const verifySubscription = async () => {
+      if (!sessionId) {
+        setError("No session ID provided");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setVerifying(true);
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session) {
+          setError("Please log in to verify your subscription");
+          setLoading(false);
+          setVerifying(false);
+          return;
+        }
+
+        // Verify and sync subscription from Stripe
+        const response = await fetch("/api/subscriptions/verify", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ sessionId }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          toast.success("Subscription verified and activated!");
+        } else if (response.ok && !data.success) {
+          // Session exists but no subscription yet - webhook will handle it
+          toast.info(
+            "Payment successful! Your subscription will be activated shortly."
+          );
+        } else {
+          console.error("Verification error:", data.error);
+          toast.warning(
+            "Payment successful, but subscription verification is pending. Please refresh in a moment."
+          );
+        }
+      } catch (error) {
+        console.error("Error verifying subscription:", error);
+        toast.warning(
+          "Payment successful! If your subscription doesn't appear, please contact support."
+        );
+      } finally {
+        setLoading(false);
+        setVerifying(false);
+      }
+    };
+
+    verifySubscription();
   }, [sessionId]);
 
-  if (loading) {
+  if (loading || verifying) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-950">
-        <Loader2 className="h-8 w-8 animate-spin text-emerald-400" />
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald-400 mx-auto" />
+          <p className="text-sm text-slate-300">
+            {verifying ? "Verifying your subscription..." : "Loading..."}
+          </p>
+        </div>
       </div>
     );
   }
@@ -59,13 +116,8 @@ function PricingSuccessContent() {
           you now have access to all premium features.
         </p>
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <Button onClick={() => router.push("/chats")}>
-            Go to Dashboard
-          </Button>
-          <Button
-            variant="subtle"
-            onClick={() => router.push("/pricing")}
-          >
+          <Button onClick={() => router.push("/chats")}>Go to Dashboard</Button>
+          <Button variant="subtle" onClick={() => router.push("/pricing")}>
             View Plans
           </Button>
         </div>
@@ -90,4 +142,3 @@ export default function PricingSuccessPage() {
     </Suspense>
   );
 }
-
