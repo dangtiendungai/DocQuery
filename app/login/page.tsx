@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Button from "@/components/ui/Button";
 import TextField from "@/components/ui/TextField";
 import { supabase } from "@/lib/supabaseClient";
@@ -26,15 +27,31 @@ export default function LoginPage() {
         });
 
       if (signInError) {
-        setError(
-          signInError.message ||
-            "Failed to sign in. Please check your credentials."
-        );
+        // Check if error is due to unverified email
+        if (signInError.message?.includes("email") && signInError.message?.includes("confirm")) {
+          setError(
+            "Please verify your email address before signing in. Check your inbox for the verification link."
+          );
+        } else {
+          setError(
+            signInError.message ||
+              "Failed to sign in. Please check your credentials."
+          );
+        }
         setIsSubmitting(false);
         return;
       }
 
       if (data.user) {
+        // Check if email is verified
+        if (!data.user.email_confirmed_at) {
+          setError(
+            "Please verify your email address before signing in. Check your inbox for the verification link."
+          );
+          setIsSubmitting(false);
+          return;
+        }
+
         // Redirect to chats page or home after successful login
         const redirectTo =
           process.env.NEXT_PUBLIC_POST_LOGIN_REDIRECT || "/chats";
@@ -130,12 +147,12 @@ export default function LoginPage() {
                   >
                     Password
                   </label>
-                  <a
-                    href="#"
+                  <Link
+                    href="/forgot-password"
                     className="text-xs font-medium text-emerald-300 hover:text-emerald-200"
                   >
                     Forgot your password?
-                  </a>
+                  </Link>
                 </div>
                 <TextField
                   id="password"

@@ -67,9 +67,7 @@ export default function RegisterPage() {
             last_name: trimmedLastName,
             company: trimmedCompany,
           },
-          emailRedirectTo:
-            process.env.NEXT_PUBLIC_DOCQUERY_POST_SIGNUP_REDIRECT ??
-            `${window.location.origin}/login`,
+          emailRedirectTo: `${window.location.origin}/auth/callback?type=signup`,
         },
       });
 
@@ -81,19 +79,9 @@ export default function RegisterPage() {
         return;
       }
 
-      // Reset form
-      setFirstName("");
-      setLastName("");
-      setCompany("");
-      setEmail("");
-      setPassword("");
-      setConfirmPassword("");
-      setAcceptedTos(false);
-      setStatus({
-        variant: "success",
-        message:
-          "Account created! Check your inbox to confirm your email before signing in.",
-      });
+      // Redirect to verify-email page
+      const trimmedEmail = email.trim();
+      window.location.href = `/verify-email?email=${encodeURIComponent(trimmedEmail)}`;
     } catch (error) {
       setStatus({
         variant: "error",
