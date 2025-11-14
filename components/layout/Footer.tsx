@@ -3,22 +3,22 @@ import Link from "next/link";
 const productLinks = [
   { label: "Overview", href: "/" },
   { label: "Pricing", href: "/pricing" },
-  { label: "Security", href: "#" },
-  { label: "Roadmap", href: "#" },
+  { label: "Security", href: "/security" },
+  { label: "Roadmap", href: "/roadmap" },
 ];
 
 const resourcesLinks = [
-  { label: "Docs", href: "#" },
-  { label: "API", href: "#" },
-  { label: "Playground", href: "/chats" },
-  { label: "Support", href: "/login" },
+  { label: "Docs", href: "/docs" },
+  { label: "API", href: "/api" },
+  { label: "Playground", href: "/playground" },
+  { label: "Support", href: "/support" },
 ];
 
 const companyLinks = [
-  { label: "About", href: "#" },
-  { label: "Blog", href: "#" },
-  { label: "Careers", href: "#" },
-  { label: "Contact", href: "#" },
+  { label: "About", href: "/about" },
+  { label: "Blog", href: "/blog" },
+  { label: "Careers", href: "/careers" },
+  { label: "Contact", href: "/contact" },
 ];
 
 export default function Footer() {

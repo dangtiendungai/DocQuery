@@ -646,7 +646,7 @@ export default function ChatsPage() {
                   variant="ghost"
                   size="sm"
                   onClick={handleManageSources}
-                  className="rounded-full border-white/15 text-slate-200 hover:border-white/30 hover:text-white"
+                  className="rounded-full border-white/15 text-slate-200 hover:border-white/30 hover:text-white whitespace-nowrap"
                 >
                   Manage sources
                 </Button>
