@@ -38,6 +38,46 @@ CREATE INDEX IF NOT EXISTS idx_documents_status ON documents(status);
 CREATE INDEX IF NOT EXISTS idx_document_chunks_document_id ON document_chunks(document_id);
 CREATE INDEX IF NOT EXISTS idx_document_chunks_user_id ON document_chunks(user_id);
 
+-- Create vector index for similarity search (using ivfflat for better performance)
+-- Note: This index requires at least some data to be effective
+CREATE INDEX IF NOT EXISTS idx_document_chunks_embedding ON document_chunks 
+USING ivfflat (embedding vector_cosine_ops) 
+WITH (lists = 100);
+
+-- Create RPC function for vector similarity search (optional, for better performance)
+CREATE OR REPLACE FUNCTION match_document_chunks(
+  query_embedding vector(1536),
+  match_threshold float DEFAULT 0.7,
+  match_count int DEFAULT 5,
+  document_ids uuid[] DEFAULT NULL
+)
+RETURNS TABLE (
+  id uuid,
+  document_id uuid,
+  content text,
+  chunk_index int,
+  similarity float
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    dc.id,
+    dc.document_id,
+    dc.content,
+    dc.chunk_index,
+    1 - (dc.embedding <=> query_embedding) as similarity
+  FROM document_chunks dc
+  WHERE 
+    dc.embedding IS NOT NULL
+    AND (document_ids IS NULL OR dc.document_id = ANY(document_ids))
+    AND 1 - (dc.embedding <=> query_embedding) >= match_threshold
+  ORDER BY dc.embedding <=> query_embedding
+  LIMIT match_count;
+END;
+$$;
+
 -- Enable Row Level Security (RLS)
 ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document_chunks ENABLE ROW LEVEL SECURITY;

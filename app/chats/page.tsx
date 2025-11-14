@@ -4,25 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import { supabase } from "@/lib/supabaseClient";
-import { Bot, Loader2 } from "lucide-react";
-
-const conversations = [
-  {
-    title: "Refund policy launch",
-    description: "Latest PDF from Legal synced 2 hours ago · 12 messages",
-    status: "Active",
-  },
-  {
-    title: "Support macros revamp",
-    description: "Macros handbook + Zendesk exports · 27 messages",
-    status: "Updated yesterday",
-  },
-  {
-    title: "Hardware onboarding checklist",
-    description: "Notebook + SOP docs · 18 messages",
-    status: "Follow-up needed",
-  },
-];
+import { Bot, Loader2, Plus, FileText } from "lucide-react";
 
 const suggestions = [
   "Summarize the changes between Warranty_v4 and Warranty_v5",
@@ -59,6 +41,14 @@ export default function ChatsPage() {
   const [loadingDocs, setLoadingDocs] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   useEffect(() => {
     fetchDocuments();
@@ -160,9 +150,30 @@ export default function ChatsPage() {
     }
   };
 
+  const handleNewChat = () => {
+    setMessages([
+      {
+        role: "assistant",
+        content:
+          "Hello! I'm DocQuery. Ask me anything about your uploaded documents, and I'll search through them to find relevant answers.",
+      },
+    ]);
+    setQuery("");
+    textareaRef.current?.focus();
+  };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setQuery(suggestion);
+    textareaRef.current?.focus();
+  };
+
+  const handleManageSources = () => {
+    router.push("/");
+  };
+
   return (
-    <div className="min-h-screen bg-slate-950 px-6 py-16 text-slate-100 lg:px-0">
-      <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[320px_1fr] px-6 lg:px-12">
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[320px_1fr] px-6 py-16 lg:px-12">
         <aside className="space-y-6">
           <div>
             <h1 className="text-2xl font-semibold text-white">Chats</h1>
@@ -170,48 +181,67 @@ export default function ChatsPage() {
               Keep every retrieval session grounded and shareable across teams.
             </p>
           </div>
-          <Button className="w-full rounded-full">New chat</Button>
+          <Button className="w-full rounded-full" onClick={handleNewChat}>
+            <Plus className="mr-2 h-4 w-4" />
+            New chat
+          </Button>
 
-          <div className="rounded-3xl border border-white/10 bg-slate-900/70 p-5 backdrop-blur">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-300">
-              Recent conversations
-            </h2>
-            <div className="mt-4 space-y-3">
-              {conversations.map((conversation) => (
-                <Button
-                  key={conversation.title}
-                  variant="subtle"
-                  className="!flex w-full flex-col items-start gap-1 !rounded-2xl border-white/10 bg-white/5 px-4 py-3 text-left text-sm text-slate-200 hover:border-white/20 hover:bg-white/10"
-                >
-                  <p className="font-semibold text-white">
-                    {conversation.title}
-                  </p>
-                  <p className="text-xs text-slate-400">
-                    {conversation.description}
-                  </p>
-                  <span className="mt-1 inline-flex items-center rounded-full bg-emerald-500/15 px-2 py-1 text-[11px] font-medium text-emerald-200">
-                    {conversation.status}
-                  </span>
-                </Button>
-              ))}
+          {documents.length > 0 && (
+            <div className="rounded-3xl border border-white/10 bg-slate-900/70 p-5 backdrop-blur">
+              <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-300">
+                Your documents
+              </h2>
+              <div className="mt-4 space-y-2">
+                {documents.slice(0, 5).map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2"
+                  >
+                    <FileText className="h-4 w-4 text-slate-400" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-white truncate">
+                        {doc.name}
+                      </p>
+                      <p className="text-[10px] text-slate-400">
+                        {doc.status === "processed"
+                          ? `${doc.chunk_count} chunks`
+                          : doc.status}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+                {documents.length > 5 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleManageSources}
+                    className="w-full text-xs text-slate-400 hover:text-white"
+                  >
+                    View all ({documents.length})
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur">
-            <h2 className="text-sm font-semibold text-white">
-              Quick suggestions
-            </h2>
-            <ul className="mt-3 space-y-3 text-sm text-slate-300">
-              {suggestions.map((suggestion) => (
-                <li
-                  key={suggestion}
-                  className="rounded-2xl border border-white/10 px-3 py-2"
-                >
-                  {suggestion}
-                </li>
-              ))}
-            </ul>
-          </div>
+          {documents.length > 0 && (
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur">
+              <h2 className="text-sm font-semibold text-white">
+                Quick suggestions
+              </h2>
+              <ul className="mt-3 space-y-2 text-sm text-slate-300">
+                {suggestions.map((suggestion) => (
+                  <li
+                    key={suggestion}
+                    onClick={() => handleSuggestionClick(suggestion)}
+                    className="cursor-pointer rounded-xl border border-white/10 bg-white/5 px-3 py-2 transition hover:border-white/20 hover:bg-white/10 hover:text-white"
+                  >
+                    {suggestion}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </aside>
 
         <main className="space-y-6">
@@ -222,13 +252,15 @@ export default function ChatsPage() {
                   DocQuery workspace
                 </h2>
                 <p className="text-sm text-slate-300">
-                  Ask questions across your synced manuals, knowledge bases, and
-                  policies. Follow-ups stay contextualized.
+                  {documents.length > 0
+                    ? "Ask questions across your synced manuals, knowledge bases, and policies. Follow-ups stay contextualized."
+                    : "Upload documents to start asking questions. Go to the home page to upload your first files."}
                 </p>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
+                onClick={handleManageSources}
                 className="rounded-full border-white/15 text-slate-200 hover:border-white/30 hover:text-white"
               >
                 Manage sources
@@ -236,9 +268,11 @@ export default function ChatsPage() {
             </div>
 
             <div className="mt-6 rounded-2xl border border-white/10 bg-slate-950/80 p-4 text-sm text-slate-300 max-h-[500px] overflow-y-auto">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
-                Live conversation
-              </p>
+              {messages.length > 1 && (
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
+                  Live conversation
+                </p>
+              )}
               <div className="space-y-4">
                 {messages.map((message, index) => {
                   const isAssistant = message.role === "assistant";
@@ -331,22 +365,26 @@ export default function ChatsPage() {
             </div>
           </section>
 
-          <section className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-300">
-              Recently synced files
-            </h2>
-            <div className="mt-4 grid gap-4 md:grid-cols-3">
-              {loadingDocs ? (
-                <p className="text-sm text-slate-400">Loading documents...</p>
-              ) : documents.length === 0 ? (
-                <p className="text-sm text-slate-400">
-                  No documents yet. Upload files from the home page!
-                </p>
-              ) : (
-                documents.slice(0, 3).map((doc) => (
+          {documents.length > 0 && (
+            <section className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-300">
+                  Recently synced files
+                </h2>
+                <Button
+                  variant="link"
+                  size="sm"
+                  onClick={handleManageSources}
+                  className="text-xs text-emerald-200 hover:text-emerald-100"
+                >
+                  Upload more
+                </Button>
+              </div>
+              <div className="mt-4 grid gap-4 md:grid-cols-3">
+                {documents.slice(0, 3).map((doc) => (
                   <div
                     key={doc.id}
-                    className="rounded-2xl border border-white/10 bg-slate-900/60 p-4"
+                    className="rounded-2xl border border-white/10 bg-slate-900/60 p-4 transition hover:border-white/20"
                   >
                     <span
                       className={`inline-flex h-2 w-12 rounded-full ${
@@ -357,7 +395,7 @@ export default function ChatsPage() {
                           : "bg-red-400"
                       }`}
                     />
-                    <p className="mt-3 text-sm font-semibold text-white">
+                    <p className="mt-3 text-sm font-semibold text-white truncate">
                       {doc.name}
                     </p>
                     <p className="text-xs text-slate-400">
@@ -366,10 +404,10 @@ export default function ChatsPage() {
                         : doc.status}
                     </p>
                   </div>
-                ))
-              )}
-            </div>
-          </section>
+                ))}
+              </div>
+            </section>
+          )}
         </main>
       </div>
     </div>

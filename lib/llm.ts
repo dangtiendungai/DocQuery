@@ -90,6 +90,55 @@ Please provide a comprehensive answer based on the above context. If the context
 }
 
 /**
+ * Generate embeddings for text using OpenAI
+ */
+export async function generateEmbedding(text: string): Promise<number[]> {
+  if (!openai) {
+    throw new Error("OpenAI API key is not configured");
+  }
+
+  try {
+    const response = await openai.embeddings.create({
+      model: "text-embedding-3-small", // 1536 dimensions
+      input: text,
+    });
+
+    const embedding = response.data[0]?.embedding;
+    if (!embedding) {
+      throw new Error("No embedding generated");
+    }
+
+    return embedding;
+  } catch (error) {
+    console.error("Error generating embedding:", error);
+    throw error;
+  }
+}
+
+/**
+ * Generate embeddings for multiple texts in batch
+ */
+export async function generateEmbeddingsBatch(
+  texts: string[]
+): Promise<number[][]> {
+  if (!openai) {
+    throw new Error("OpenAI API key is not configured");
+  }
+
+  try {
+    const response = await openai.embeddings.create({
+      model: "text-embedding-3-small",
+      input: texts,
+    });
+
+    return response.data.map((item) => item.embedding);
+  } catch (error) {
+    console.error("Error generating embeddings batch:", error);
+    throw error;
+  }
+}
+
+/**
  * Check if OpenAI is configured
  */
 export function isOpenAIConfigured(): boolean {

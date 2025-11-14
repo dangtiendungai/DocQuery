@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { generateAnswer } from "@/lib/llm";
+import { generateAnswer, generateEmbedding, isOpenAIConfigured } from "@/lib/llm";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -40,10 +40,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Query is required" }, { status: 400 });
     }
 
-    // Search document chunks using text search (vector search would require embeddings)
-    // For now, we'll use PostgreSQL ILIKE for case-insensitive search
-    const searchQuery = query.trim().toLowerCase();
-
     // First, get processed documents
     const { data: processedDocs, error: docsError } = await supabase
       .from("documents")
@@ -70,17 +66,85 @@ export async function POST(request: NextRequest) {
     const docIds = processedDocs.map((doc) => doc.id);
     const docMap = new Map(processedDocs.map((doc) => [doc.id, doc]));
 
-    // Search chunks
-    const { data: chunks, error } = await supabase
-      .from("document_chunks")
-      .select("id, content, chunk_index, document_id")
-      .in("document_id", docIds)
-      .ilike("content", `%${searchQuery}%`)
-      .order("chunk_index", { ascending: true })
-      .limit(limit);
+    // Try vector search if OpenAI is configured, otherwise fall back to text search
+    let chunks: any[] = [];
+    let searchError: any = null;
 
-    if (error) {
-      console.error("Database error:", error);
+    if (isOpenAIConfigured()) {
+      try {
+        // Generate embedding for the query
+        const queryEmbedding = await generateEmbedding(query);
+
+        // Use vector similarity search with pgvector
+        const { data: vectorChunks, error: vectorError } = await supabase.rpc(
+          "match_document_chunks",
+          {
+            query_embedding: queryEmbedding,
+            match_threshold: 0.7,
+            match_count: limit,
+            document_ids: docIds,
+          }
+        );
+
+        if (!vectorError && vectorChunks && vectorChunks.length > 0) {
+          // RPC function returns chunks with similarity score
+          chunks = vectorChunks;
+        } else {
+          // If RPC function doesn't exist, use direct SQL query
+          console.log("RPC function not found, using direct SQL query");
+          const { data: sqlChunks, error: sqlError } = await supabase
+            .from("document_chunks")
+            .select("id, content, chunk_index, document_id, embedding")
+            .in("document_id", docIds)
+            .not("embedding", "is", null)
+            .limit(limit * 2); // Get more to filter by similarity
+
+          if (!sqlError && sqlChunks) {
+            // Calculate cosine similarity and sort
+            const chunksWithSimilarity = sqlChunks
+              .map((chunk) => {
+                if (!chunk.embedding) return null;
+                const similarity = cosineSimilarity(
+                  queryEmbedding,
+                  chunk.embedding
+                );
+                return { ...chunk, similarity };
+              })
+              .filter((chunk) => chunk !== null && chunk.similarity >= 0.7)
+              .sort((a, b) => (b?.similarity || 0) - (a?.similarity || 0))
+              .slice(0, limit);
+
+            chunks = chunksWithSimilarity;
+          } else {
+            searchError = sqlError;
+          }
+        }
+      } catch (embeddingError) {
+        console.error("Error with vector search, falling back to text search:", embeddingError);
+        // Fall through to text search
+      }
+    }
+
+    // Fall back to text search if vector search failed or OpenAI not configured
+    if (chunks.length === 0) {
+      const searchQuery = query.trim().toLowerCase();
+      const { data: textChunks, error: textError } = await supabase
+        .from("document_chunks")
+        .select("id, content, chunk_index, document_id")
+        .in("document_id", docIds)
+        .ilike("content", `%${searchQuery}%`)
+        .order("chunk_index", { ascending: true })
+        .limit(limit);
+
+      if (textError) {
+        searchError = textError;
+      } else {
+        chunks = textChunks || [];
+      }
+    }
+
+    if (searchError) {
+      console.error("Database error:", searchError);
       return NextResponse.json(
         { error: "Failed to search documents" },
         { status: 500 }
@@ -88,23 +152,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Format response
-    const results =
-      chunks?.map((chunk) => {
-        const doc = docMap.get(chunk.document_id);
-        return {
-          chunkId: chunk.id,
-          content: chunk.content,
-          chunkIndex: chunk.chunk_index,
-          document: {
-            id: doc?.id || chunk.document_id,
-            name: doc?.name || "Unknown",
-            fileType: doc?.file_type || "unknown",
-          },
-          citation: `${doc?.name || "Unknown"} · Chunk ${
-            chunk.chunk_index + 1
-          }`,
-        };
-      }) || [];
+    const results = chunks.map((chunk) => {
+      const doc = docMap.get(chunk.document_id);
+      return {
+        chunkId: chunk.id,
+        content: chunk.content,
+        chunkIndex: chunk.chunk_index,
+        document: {
+          id: doc?.id || chunk.document_id,
+          name: doc?.name || "Unknown",
+          fileType: doc?.file_type || "unknown",
+        },
+        citation: `${doc?.name || "Unknown"} · Chunk ${
+          chunk.chunk_index + 1
+        }`,
+      };
+    });
 
     // Generate an intelligent answer using LLM if chunks found
     let answer: string;
@@ -147,4 +210,25 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * Calculate cosine similarity between two vectors
+ */
+function cosineSimilarity(vecA: number[], vecB: number[]): number {
+  if (vecA.length !== vecB.length) {
+    return 0;
+  }
+
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
+
+  for (let i = 0; i < vecA.length; i++) {
+    dotProduct += vecA[i] * vecB[i];
+    normA += vecA[i] * vecA[i];
+    normB += vecB[i] * vecB[i];
+  }
+
+  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }

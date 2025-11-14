@@ -6,6 +6,10 @@ import {
   getFileType,
   type SupportedFileType,
 } from "@/lib/documentProcessor";
+import {
+  generateEmbeddingsBatch,
+  isOpenAIConfigured,
+} from "@/lib/llm";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -132,8 +136,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Save chunks to database
-    const chunksToInsert = chunks.map((chunk) => ({
+    // Generate embeddings for chunks if OpenAI is configured
+    let embeddings: number[][] = [];
+    if (isOpenAIConfigured()) {
+      try {
+        const chunkTexts = chunks.map((chunk) => chunk.content);
+        // Generate embeddings in batches (OpenAI supports up to 2048 inputs per batch)
+        const batchSize = 100;
+        for (let i = 0; i < chunkTexts.length; i += batchSize) {
+          const batch = chunkTexts.slice(i, i + batchSize);
+          const batchEmbeddings = await generateEmbeddingsBatch(batch);
+          embeddings.push(...batchEmbeddings);
+        }
+      } catch (embeddingError) {
+        console.error("Error generating embeddings:", embeddingError);
+        // Continue without embeddings - document will still be saved
+      }
+    }
+
+    // Save chunks to database with embeddings
+    const chunksToInsert = chunks.map((chunk, index) => ({
       document_id: documentData.id,
       user_id: user.id,
       chunk_index: chunk.chunkIndex,
@@ -141,6 +163,7 @@ export async function POST(request: NextRequest) {
       start_char: chunk.startChar,
       end_char: chunk.endChar,
       token_count: Math.ceil(chunk.content.length / 4), // Estimate
+      embedding: embeddings[index] || null, // Include embedding if available
     }));
 
     const { error: chunksError } = await supabase
