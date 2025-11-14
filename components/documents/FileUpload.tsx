@@ -13,7 +13,12 @@ interface UploadingFile {
   error?: string;
 }
 
-export default function FileUpload() {
+interface FileUploadProps {
+  onUploadComplete?: (document: { id: string; name: string; chunkCount: number }) => void;
+  onError?: (error: string) => void;
+}
+
+export default function FileUpload({ onUploadComplete, onError }: FileUploadProps = {}) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
@@ -94,15 +99,35 @@ export default function FileUpload() {
   };
 
   const uploadFile = async (file: File, userId: string) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("userId", userId);
-
     try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        throw new Error("Please log in to upload documents");
+      }
+
+      const formData = new FormData();
+      formData.append("file", file);
+
       const response = await fetch("/api/documents/upload", {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: formData,
       });
+
+      // Check if response is JSON
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text();
+        console.error("Non-JSON response:", text.substring(0, 500));
+        throw new Error(
+          `Server error (${response.status}): ${response.statusText}. Please check the server logs.`
+        );
+      }
 
       const data = await response.json();
 
@@ -119,22 +144,35 @@ export default function FileUpload() {
         )
       );
 
+      // Call the callback if provided
+      if (onUploadComplete && data.document) {
+        onUploadComplete({
+          id: data.document.id,
+          name: data.document.name,
+          chunkCount: data.document.chunkCount || data.document.chunk_count || 0,
+        });
+      }
+
       // Remove from list after 3 seconds
       setTimeout(() => {
         setUploadingFiles((prev) => prev.filter((uf) => uf.file !== file));
       }, 3000);
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Upload failed";
       setUploadingFiles((prev) =>
         prev.map((uf) =>
           uf.file === file
             ? {
                 ...uf,
                 status: "error" as const,
-                error: error instanceof Error ? error.message : "Upload failed",
+                error: errorMessage,
               }
             : uf
         )
       );
+      if (onError) {
+        onError(errorMessage);
+      }
     }
   };
 
