@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import TextField from "@/components/ui/TextField";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { supabase } from "@/lib/supabaseClient";
 import {
   Bot,
@@ -73,6 +74,16 @@ export default function ChatsPage() {
   const [loading, setLoading] = useState(false);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loadingConversations, setLoadingConversations] = useState(true);
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    conversationId: string | null;
+    conversationTitle: string;
+  }>({
+    open: false,
+    conversationId: null,
+    conversationTitle: "",
+  });
+  const [deleting, setDeleting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -80,11 +91,6 @@ export default function ChatsPage() {
     fetchDocuments();
     fetchConversations();
   }, []);
-
-  useEffect(() => {
-    // Auto-scroll to bottom when messages change
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
 
   const fetchDocuments = async () => {
     try {
@@ -223,30 +229,51 @@ export default function ChatsPage() {
     }
   };
 
-  const deleteConversation = async (
+  const handleDeleteClick = (
     conversationId: string,
+    conversationTitle: string,
     e: React.MouseEvent
   ) => {
     e.stopPropagation();
+    setDeleteDialog({
+      open: true,
+      conversationId,
+      conversationTitle,
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteDialog.conversationId) return;
+
+    setDeleting(true);
     try {
       const {
         data: { session },
       } = await supabase.auth.getSession();
 
       if (!session) {
+        setDeleteDialog({
+          open: false,
+          conversationId: null,
+          conversationTitle: "",
+        });
+        setDeleting(false);
         return;
       }
 
-      const response = await fetch(`/api/conversations/${conversationId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
+      const response = await fetch(
+        `/api/conversations/${deleteDialog.conversationId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
 
       if (response.ok) {
         await fetchConversations();
-        if (currentConversationId === conversationId) {
+        if (currentConversationId === deleteDialog.conversationId) {
           setCurrentConversationId(null);
           setMessages([
             {
@@ -256,10 +283,26 @@ export default function ChatsPage() {
             },
           ]);
         }
+        // Close dialog after successful deletion
+        setDeleteDialog({
+          open: false,
+          conversationId: null,
+          conversationTitle: "",
+        });
       }
     } catch (error) {
       console.error("Error deleting conversation:", error);
+    } finally {
+      setDeleting(false);
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialog({
+      open: false,
+      conversationId: null,
+      conversationTitle: "",
+    });
   };
 
   const saveMessage = async (message: Message, conversationId: string) => {
@@ -527,11 +570,11 @@ export default function ChatsPage() {
                       </p>
                     </div>
                     <button
-                      onClick={(e) => deleteConversation(conv.id, e)}
-                      className="opacity-0 group-hover:opacity-100 transition p-1 hover:bg-red-500/20 rounded"
+                      onClick={(e) => handleDeleteClick(conv.id, conv.title, e)}
+                      className="opacity-0 group-hover:opacity-100 transition cursor-pointer"
                       aria-label="Delete conversation"
                     >
-                      <Trash2 className="h-3 w-3 text-red-400" />
+                      <Trash2 className="h-4 w-4 text-red-400" />
                     </button>
                   </div>
                 ))}
@@ -818,6 +861,18 @@ export default function ChatsPage() {
           )}
         </main>
       </div>
+
+      <ConfirmDialog
+        open={deleteDialog.open}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Conversation"
+        message={`Are you sure you want to delete "${deleteDialog.conversationTitle}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        loading={deleting}
+      />
     </div>
   );
 }
