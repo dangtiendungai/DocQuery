@@ -12,6 +12,10 @@ DocQuery is a full-stack RAG application built with Next.js, Supabase, and OpenA
 - 💬 **Persistent Conversations**: Save and manage multiple chat sessions
 - 🔒 **Secure & Private**: Row-level security ensures data isolation
 - 📚 **Citation Tracking**: Every answer includes source document citations
+- 💳 **Subscription Management**: Stripe integration for premium plans
+- 👤 **User Profiles**: Manage account settings, security, and membership
+- 📧 **Email Verification**: Secure email verification flow
+- 🔐 **Password Reset**: Forgot password and reset functionality
 - ⚡ **Fast & Scalable**: Optimized for performance with Supabase
 
 ## 🏗️ Architecture
@@ -28,11 +32,15 @@ DocQuery is a full-stack RAG application built with Next.js, Supabase, and OpenA
          │     ├── documents table
          │     ├── document_chunks table (with embeddings)
          │     ├── conversations table
-         │     └── messages table
+         │     ├── messages table
+         │     ├── subscriptions table
+         │     └── contact_submissions table
          │
          ├───► Supabase Storage (File Storage)
          │
-         └───► OpenAI API (Embeddings & Chat Completions)
+         ├───► OpenAI API (Embeddings & Chat Completions)
+         │
+         └───► Stripe API (Payment Processing & Subscriptions)
 ```
 
 ### Tech Stack
@@ -43,6 +51,8 @@ DocQuery is a full-stack RAG application built with Next.js, Supabase, and OpenA
 - **Storage**: Supabase Storage
 - **AI**: OpenAI (embeddings & chat completions)
 - **Authentication**: Supabase Auth (email/password + OAuth)
+- **Payments**: Stripe (checkout, subscriptions, webhooks)
+- **UI Components**: Lucide React icons, react-toastify notifications
 
 ## 🚀 Quick Start
 
@@ -73,6 +83,8 @@ npm install
      -- 1. supabase/migrations/001_initial_schema.sql
      -- 2. supabase/migrations/002_update_match_function.sql
      -- 3. supabase/migrations/003_conversations_and_messages.sql
+     -- 4. supabase/migrations/004_contact_submissions.sql
+     -- 5. supabase/migrations/005_subscriptions.sql
      ```
 
 3. **Create storage bucket**:
@@ -102,6 +114,17 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
 
 # Optional (for AI features)
 OPENAI_API_KEY=sk-your_openai_key_here
+
+# Optional (for Stripe subscriptions)
+STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
+STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
+STRIPE_PRICE_ID_STARTER=price_your_starter_price_id
+STRIPE_PRICE_ID_GROWTH=price_your_growth_price_id
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+# Optional (redirects)
+NEXT_PUBLIC_POST_LOGIN_REDIRECT=/chats
+NEXT_PUBLIC_DOCQUERY_POST_SIGNUP_REDIRECT=/login
 ```
 
 ### 4. Run the Development Server
@@ -112,7 +135,26 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### 5. Create Your First Account
+### 5. Set Up Stripe (Optional - for subscriptions)
+
+1. **Create a Stripe account** at [stripe.com](https://stripe.com)
+2. **Create products and prices** in Stripe Dashboard:
+   - Create a "Starter" product with a recurring price
+   - Create a "Growth" product with a recurring price
+   - Copy the Price IDs (e.g., `price_xxxxx`)
+3. **Set up webhooks**:
+   - Go to Stripe Dashboard → Developers → Webhooks
+   - Add endpoint: `https://your-domain.com/api/webhooks/stripe`
+   - Select events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
+   - Copy the webhook signing secret
+4. **Add Stripe keys to `.env.local`**:
+   - `STRIPE_SECRET_KEY`: Your Stripe secret key (starts with `sk_`)
+   - `STRIPE_WEBHOOK_SECRET`: Webhook signing secret (starts with `whsec_`)
+   - `STRIPE_PRICE_ID_STARTER`: Your Starter plan price ID
+   - `STRIPE_PRICE_ID_GROWTH`: Your Growth plan price ID
+   - `SUPABASE_SERVICE_ROLE_KEY`: Your Supabase service role key (from Project Settings → API)
+
+### 6. Create Your First Account
 
 1. Click "Get started" or navigate to `/register`
 2. Sign up with email/password or Google OAuth
@@ -179,6 +221,28 @@ messages
 ├── content (TEXT)
 ├── citations (TEXT[])
 └── created_at (TIMESTAMP)
+
+subscriptions
+├── id (UUID)
+├── user_id (UUID) → auth.users
+├── stripe_customer_id (TEXT)
+├── stripe_subscription_id (TEXT)
+├── stripe_price_id (TEXT)
+├── plan (TEXT: starter, growth, enterprise)
+├── status (TEXT: active, trialing, past_due, canceled)
+├── current_period_start (TIMESTAMP)
+├── current_period_end (TIMESTAMP)
+├── cancel_at_period_end (BOOLEAN)
+├── created_at (TIMESTAMP)
+└── updated_at (TIMESTAMP)
+
+contact_submissions
+├── id (UUID)
+├── name (TEXT)
+├── email (TEXT)
+├── company (TEXT)
+├── message (TEXT)
+└── created_at (TIMESTAMP)
 ```
 
 ## 🔧 Configuration
@@ -190,6 +254,11 @@ messages
 | `NEXT_PUBLIC_SUPABASE_URL` | ✅ Yes | Your Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ Yes | Your Supabase anonymous key |
 | `OPENAI_API_KEY` | ❌ No | OpenAI API key for AI features |
+| `STRIPE_SECRET_KEY` | ❌ No | Stripe secret key (for subscriptions) |
+| `STRIPE_WEBHOOK_SECRET` | ❌ No | Stripe webhook signing secret |
+| `STRIPE_PRICE_ID_STARTER` | ❌ No | Stripe price ID for Starter plan |
+| `STRIPE_PRICE_ID_GROWTH` | ❌ No | Stripe price ID for Growth plan |
+| `SUPABASE_SERVICE_ROLE_KEY` | ❌ No | Supabase service role key (for webhooks) |
 | `NEXT_PUBLIC_POST_LOGIN_REDIRECT` | ❌ No | Redirect after login (default: `/chats`) |
 | `NEXT_PUBLIC_DOCQUERY_POST_SIGNUP_REDIRECT` | ❌ No | Redirect after signup (default: `/login`) |
 
@@ -308,6 +377,73 @@ Get a conversation with its messages.
 
 Delete a conversation (messages cascade delete).
 
+### Subscriptions API
+
+#### `GET /api/subscriptions`
+
+Get the authenticated user's subscription status.
+
+**Response:**
+```json
+{
+  "subscription": {
+    "id": "uuid",
+    "plan": "starter",
+    "status": "active",
+    "current_period_end": "2024-02-01T00:00:00Z",
+    "cancel_at_period_end": false
+  }
+}
+```
+
+#### `POST /api/subscriptions/verify`
+
+Verify and sync subscription from Stripe checkout session.
+
+**Request:**
+```json
+{
+  "sessionId": "cs_test_xxxxx"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "subscription": { ... }
+}
+```
+
+#### `POST /api/checkout`
+
+Create a Stripe checkout session for subscription.
+
+**Request:**
+```json
+{
+  "plan": "starter",
+  "priceId": "price_xxxxx"
+}
+```
+
+**Response:**
+```json
+{
+  "sessionId": "cs_test_xxxxx",
+  "url": "https://checkout.stripe.com/..."
+}
+```
+
+#### `POST /api/webhooks/stripe`
+
+Stripe webhook endpoint for handling subscription events.
+
+**Events handled:**
+- `checkout.session.completed`: Creates subscription record
+- `customer.subscription.updated`: Updates subscription status
+- `customer.subscription.deleted`: Updates subscription status
+
 ### Messages API
 
 #### `POST /api/messages`
@@ -331,6 +467,8 @@ Migrations are located in `supabase/migrations/`. Run them in order:
 1. **001_initial_schema.sql**: Creates documents and document_chunks tables, enables pgvector
 2. **002_update_match_function.sql**: Updates vector search function with user filtering
 3. **003_conversations_and_messages.sql**: Creates conversations and messages tables
+4. **004_contact_submissions.sql**: Creates contact_submissions table
+5. **005_subscriptions.sql**: Creates subscriptions table for Stripe integration
 
 To run migrations:
 
@@ -361,11 +499,21 @@ To run migrations:
 
 Make sure to set these in your deployment platform:
 
+**Required:**
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `OPENAI_API_KEY` (optional)
-- `NEXT_PUBLIC_POST_LOGIN_REDIRECT` (optional)
-- `NEXT_PUBLIC_DOCQUERY_POST_SIGNUP_REDIRECT` (optional)
+
+**Optional:**
+- `OPENAI_API_KEY` (for AI features)
+- `STRIPE_SECRET_KEY` (for subscriptions)
+- `STRIPE_WEBHOOK_SECRET` (for Stripe webhooks)
+- `STRIPE_PRICE_ID_STARTER` (Starter plan price ID)
+- `STRIPE_PRICE_ID_GROWTH` (Growth plan price ID)
+- `SUPABASE_SERVICE_ROLE_KEY` (for webhooks and admin operations)
+- `NEXT_PUBLIC_POST_LOGIN_REDIRECT` (default: `/chats`)
+- `NEXT_PUBLIC_DOCQUERY_POST_SIGNUP_REDIRECT` (default: `/login`)
+
+**Important:** After deploying, update your Stripe webhook endpoint URL to point to your production domain: `https://your-domain.com/api/webhooks/stripe`
 
 ## 🛠️ Development
 
@@ -375,20 +523,37 @@ Make sure to set these in your deployment platform:
 DocQuery/
 ├── app/                    # Next.js app router
 │   ├── api/               # API routes
+│   │   ├── checkout/      # Stripe checkout
+│   │   ├── conversations/ # Conversation management
+│   │   ├── documents/    # Document operations
+│   │   ├── messages/     # Message operations
+│   │   ├── subscriptions/ # Subscription management
+│   │   ├── webhooks/     # Stripe webhooks
+│   │   └── query/        # RAG query endpoint
 │   ├── auth/              # Auth callbacks
 │   ├── chats/             # Chat interface
 │   ├── docs/              # Documentation page
+│   ├── documents/         # Document viewer
+│   ├── forgot-password/   # Password reset
 │   ├── login/             # Login page
+│   ├── pricing/           # Pricing & checkout
+│   ├── profile/           # User profile
 │   ├── product/           # Product page
-│   ├── pricing/           # Pricing page
-│   └── register/          # Registration page
+│   ├── register/          # Registration page
+│   └── verify-email/      # Email verification
 ├── components/            # React components
 │   ├── documents/         # Document-related components
 │   ├── layout/            # Header, Footer
 │   └── ui/                # Reusable UI components
+│       ├── Button.tsx
+│       ├── TextField.tsx
+│       ├── Tabs.tsx
+│       └── ConfirmDialog.tsx
 ├── lib/                   # Utility functions
 │   ├── documentProcessor.ts  # Text extraction & chunking
 │   ├── llm.ts             # OpenAI integration
+│   ├── rateLimit.ts       # API rate limiting
+│   ├── export.ts          # Export utilities
 │   └── supabaseClient.ts  # Supabase client
 ├── supabase/
 │   └── migrations/        # Database migrations
@@ -397,10 +562,23 @@ DocQuery/
 
 ### Key Files
 
+**Core Functionality:**
 - `lib/documentProcessor.ts`: Handles PDF, DOCX, TXT, HTML text extraction
 - `lib/llm.ts`: OpenAI API integration for embeddings and chat
 - `app/api/query/route.ts`: RAG query endpoint with vector search
 - `app/api/documents/upload/route.ts`: Document upload and processing
+
+**Payment & Subscriptions:**
+- `app/api/checkout/route.ts`: Stripe checkout session creation
+- `app/api/webhooks/stripe/route.ts`: Stripe webhook handler
+- `app/api/subscriptions/verify/route.ts`: Subscription verification
+- `app/api/subscriptions/route.ts`: Subscription status retrieval
+
+**UI Components:**
+- `components/ui/Button.tsx`: Reusable button component
+- `components/ui/TextField.tsx`: Text input with password toggle
+- `components/ui/Tabs.tsx`: Tabbed navigation
+- `components/ui/ConfirmDialog.tsx`: Confirmation dialogs
 
 ## 🔒 Security
 
