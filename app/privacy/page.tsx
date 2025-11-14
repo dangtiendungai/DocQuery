@@ -114,10 +114,10 @@ export default function PrivacyPage() {
               If you have questions about this Privacy Policy, please contact us
               at{" "}
               <a
-                href="mailto:privacy@docquery.com"
+                href="mailto:dangtiendung.ai@outlook.com"
                 className="text-emerald-300 hover:text-emerald-200"
               >
-                privacy@docquery.com
+                dangtiendung.ai@outlook.com
               </a>
               .
             </p>

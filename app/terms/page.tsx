@@ -146,10 +146,10 @@ export default function TermsPage() {
             <p className="mt-4 text-slate-300 leading-relaxed">
               Questions about the Terms of Service should be sent to us at{" "}
               <a
-                href="mailto:legal@docquery.com"
+                href="mailto:dangtiendung.ai@outlook.com"
                 className="text-emerald-300 hover:text-emerald-200"
               >
-                legal@docquery.com
+                dangtiendung.ai@outlook.com
               </a>
               .
             </p>

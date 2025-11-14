@@ -263,7 +263,7 @@ export default function CareerDetailPage({
 
           <div className="mt-8 flex flex-col gap-4 sm:flex-row">
             <a
-              href={`mailto:careers@docquery.com?subject=Application: ${role.title}`}
+              href={`mailto:dangtiendung.ai@outlook.com?subject=Application: ${role.title}`}
               className="inline-flex items-center justify-center rounded-full bg-emerald-400 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 cursor-pointer w-full sm:w-auto"
             >
               Apply for this role
