@@ -80,7 +80,6 @@ export default function RegisterPage() {
       }
 
       // Redirect to verify-email page
-      const trimmedEmail = email.trim();
       window.location.href = `/verify-email?email=${encodeURIComponent(trimmedEmail)}`;
     } catch (error) {
       setStatus({
