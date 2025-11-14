@@ -745,18 +745,20 @@ export default function ChatsPage() {
             </div>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <TextField
-                multiline
-                rows={5}
-                textareaRef={textareaRef}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Ask DocQuery anything about your knowledge base..."
-                className="min-h-[120px] flex-1 resize-none"
-                disabled={loading}
-                hideLabel
-              />
+              <div className="w-full">
+                <TextField
+                  multiline
+                  rows={5}
+                  textareaRef={textareaRef}
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Ask DocQuery anything about your knowledge base..."
+                  className="min-h-[120px] flex-1 resize-none"
+                  disabled={loading}
+                  hideLabel
+                />
+              </div>
               <Button
                 onClick={handleSend}
                 disabled={loading || !query.trim()}

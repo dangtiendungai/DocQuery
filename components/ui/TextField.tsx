@@ -63,7 +63,7 @@ export default function TextField({
   const baseInputClasses = cn(
     "w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/50",
     isPasswordField ? "pr-20" : "",
-    multiline && "resize-y min-h-[100px]",
+    multiline && "resize-none min-h-[100px]",
     className
   );
 
