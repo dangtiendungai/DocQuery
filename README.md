@@ -1,36 +1,426 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DocQuery
 
-## Getting Started
+> Retrieval-Augmented Generation (RAG) made simple. Upload documents, ask questions, get answers with citations.
 
-First, run the development server:
+DocQuery is a full-stack RAG application built with Next.js, Supabase, and OpenAI. It allows users to upload documents, automatically chunk and embed them, and query them using natural language with AI-powered answers.
+
+## ✨ Features
+
+- 📄 **Multi-format Support**: Upload PDFs, DOCX, TXT, and HTML files
+- 🤖 **AI-Powered Answers**: Get intelligent responses using OpenAI GPT models
+- 🔍 **Semantic Search**: Vector similarity search using pgvector
+- 💬 **Persistent Conversations**: Save and manage multiple chat sessions
+- 🔒 **Secure & Private**: Row-level security ensures data isolation
+- 📚 **Citation Tracking**: Every answer includes source document citations
+- ⚡ **Fast & Scalable**: Optimized for performance with Supabase
+
+## 🏗️ Architecture
+
+```
+┌─────────────────┐
+│   Next.js App   │
+│  (React/TypeScript) │
+└────────┬────────┘
+         │
+         ├───► Supabase Auth (User Authentication)
+         │
+         ├───► Supabase Database (PostgreSQL + pgvector)
+         │     ├── documents table
+         │     ├── document_chunks table (with embeddings)
+         │     ├── conversations table
+         │     └── messages table
+         │
+         ├───► Supabase Storage (File Storage)
+         │
+         └───► OpenAI API (Embeddings & Chat Completions)
+```
+
+### Tech Stack
+
+- **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS
+- **Backend**: Next.js API Routes, Supabase
+- **Database**: PostgreSQL with pgvector extension
+- **Storage**: Supabase Storage
+- **AI**: OpenAI (embeddings & chat completions)
+- **Authentication**: Supabase Auth (email/password + OAuth)
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Node.js 18+ and npm
+- A Supabase account ([sign up free](https://supabase.com))
+- (Optional) An OpenAI API key ([get one here](https://platform.openai.com))
+
+### 1. Clone and Install
+
+```bash
+git clone <your-repo-url>
+cd DocQuery
+npm install
+```
+
+### 2. Set Up Supabase
+
+1. **Create a new Supabase project** at [supabase.com](https://supabase.com)
+
+2. **Run database migrations**:
+   - Go to your Supabase project dashboard
+   - Navigate to SQL Editor
+   - Run the migrations in order:
+     ```sql
+     -- Run these in sequence:
+     -- 1. supabase/migrations/001_initial_schema.sql
+     -- 2. supabase/migrations/002_update_match_function.sql
+     -- 3. supabase/migrations/003_conversations_and_messages.sql
+     ```
+
+3. **Create storage bucket**:
+   - Go to Storage in your Supabase dashboard
+   - Create a new bucket named `documents`
+   - Set it to **Private**
+   - The RLS policies are already set up in the migration
+
+4. **Get your Supabase credentials**:
+   - Go to Project Settings → API
+   - Copy your `Project URL` and `anon/public` key
+
+### 3. Configure Environment Variables
+
+Copy the example environment file:
+
+```bash
+cp .env.example .env.local
+```
+
+Edit `.env.local` and add your credentials:
+
+```env
+# Required
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+
+# Optional (for AI features)
+OPENAI_API_KEY=sk-your_openai_key_here
+```
+
+### 4. Run the Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 5. Create Your First Account
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Click "Get started" or navigate to `/register`
+2. Sign up with email/password or Google OAuth
+3. Verify your email (if email verification is enabled)
+4. Start uploading documents!
 
-## Learn More
+## 📚 Database Schema
 
-To learn more about Next.js, take a look at the following resources:
+### Documents Table
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Stores document metadata and processing status.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```sql
+documents
+├── id (UUID)
+├── user_id (UUID) → auth.users
+├── name (TEXT)
+├── file_type (TEXT: pdf, docx, txt, html)
+├── file_size (BIGINT)
+├── file_url (TEXT)
+├── storage_path (TEXT)
+├── text_content (TEXT)
+├── chunk_count (INTEGER)
+├── status (TEXT: processing, processed, error)
+├── created_at (TIMESTAMP)
+└── updated_at (TIMESTAMP)
+```
 
-## Deploy on Vercel
+### Document Chunks Table
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Stores text chunks with vector embeddings.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```sql
+document_chunks
+├── id (UUID)
+├── document_id (UUID) → documents
+├── user_id (UUID) → auth.users
+├── chunk_index (INTEGER)
+├── content (TEXT)
+├── start_char (INTEGER)
+├── end_char (INTEGER)
+├── token_count (INTEGER)
+├── embedding (VECTOR(1536)) -- OpenAI embeddings
+└── created_at (TIMESTAMP)
+```
+
+### Conversations & Messages
+
+Stores chat history and messages.
+
+```sql
+conversations
+├── id (UUID)
+├── user_id (UUID) → auth.users
+├── title (TEXT)
+├── created_at (TIMESTAMP)
+└── updated_at (TIMESTAMP)
+
+messages
+├── id (UUID)
+├── conversation_id (UUID) → conversations
+├── user_id (UUID) → auth.users
+├── role (TEXT: user, assistant)
+├── content (TEXT)
+├── citations (TEXT[])
+└── created_at (TIMESTAMP)
+```
+
+## 🔧 Configuration
+
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | ✅ Yes | Your Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ Yes | Your Supabase anonymous key |
+| `OPENAI_API_KEY` | ❌ No | OpenAI API key for AI features |
+| `NEXT_PUBLIC_POST_LOGIN_REDIRECT` | ❌ No | Redirect after login (default: `/chats`) |
+| `NEXT_PUBLIC_DOCQUERY_POST_SIGNUP_REDIRECT` | ❌ No | Redirect after signup (default: `/login`) |
+
+### Without OpenAI
+
+DocQuery works without OpenAI, but with limited functionality:
+- ✅ Document upload and storage
+- ✅ Text search (keyword-based)
+- ❌ Semantic search (vector similarity)
+- ❌ AI-generated answers (falls back to simple text concatenation)
+
+## 📖 API Reference
+
+### Authentication
+
+All API requests require a Bearer token in the Authorization header:
+
+```
+Authorization: Bearer YOUR_ACCESS_TOKEN
+```
+
+Get the token from `supabase.auth.getSession()` on the client side.
+
+### Document API
+
+#### `GET /api/documents`
+
+Fetch all documents for the authenticated user.
+
+**Response:**
+```json
+{
+  "documents": [
+    {
+      "id": "uuid",
+      "name": "document.pdf",
+      "file_type": "pdf",
+      "file_size": 1024000,
+      "chunk_count": 25,
+      "status": "processed",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+#### `POST /api/documents/upload`
+
+Upload and process a new document.
+
+**Request:** `FormData` with `file` field
+
+**Response:**
+```json
+{
+  "document": {
+    "id": "uuid",
+    "name": "document.pdf",
+    "chunkCount": 25
+  }
+}
+```
+
+#### `DELETE /api/documents/[id]`
+
+Delete a document and all its chunks.
+
+### Query API
+
+#### `POST /api/query`
+
+Query documents and get AI-powered answers.
+
+**Request:**
+```json
+{
+  "query": "What does the refund policy say?",
+  "limit": 5
+}
+```
+
+**Response:**
+```json
+{
+  "answer": "The refund policy states that...",
+  "citations": [
+    "Refund Policy.pdf · Chunk 3",
+    "Terms of Service.pdf · Chunk 12"
+  ],
+  "sources": [...]
+}
+```
+
+### Conversations API
+
+#### `GET /api/conversations`
+
+List all conversations for the authenticated user.
+
+#### `POST /api/conversations`
+
+Create a new conversation.
+
+**Request:**
+```json
+{
+  "title": "New Chat"
+}
+```
+
+#### `GET /api/conversations/[id]`
+
+Get a conversation with its messages.
+
+#### `DELETE /api/conversations/[id]`
+
+Delete a conversation (messages cascade delete).
+
+### Messages API
+
+#### `POST /api/messages`
+
+Create a new message in a conversation.
+
+**Request:**
+```json
+{
+  "conversation_id": "uuid",
+  "role": "user",
+  "content": "What is the refund policy?",
+  "citations": []
+}
+```
+
+## 🗄️ Database Migrations
+
+Migrations are located in `supabase/migrations/`. Run them in order:
+
+1. **001_initial_schema.sql**: Creates documents and document_chunks tables, enables pgvector
+2. **002_update_match_function.sql**: Updates vector search function with user filtering
+3. **003_conversations_and_messages.sql**: Creates conversations and messages tables
+
+To run migrations:
+
+1. Open Supabase SQL Editor
+2. Copy and paste each migration file
+3. Execute in order
+
+## 🚢 Deployment
+
+### Deploy to Vercel
+
+1. **Push your code to GitHub**
+
+2. **Import to Vercel**:
+   - Go to [vercel.com](https://vercel.com)
+   - Click "New Project"
+   - Import your repository
+
+3. **Add Environment Variables**:
+   - In Vercel project settings, add all variables from `.env.example`
+   - Make sure to add both `NEXT_PUBLIC_*` and server-side variables
+
+4. **Deploy**:
+   - Vercel will automatically detect Next.js and deploy
+   - Your app will be live at `your-project.vercel.app`
+
+### Environment Variables in Production
+
+Make sure to set these in your deployment platform:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `OPENAI_API_KEY` (optional)
+- `NEXT_PUBLIC_POST_LOGIN_REDIRECT` (optional)
+- `NEXT_PUBLIC_DOCQUERY_POST_SIGNUP_REDIRECT` (optional)
+
+## 🛠️ Development
+
+### Project Structure
+
+```
+DocQuery/
+├── app/                    # Next.js app router
+│   ├── api/               # API routes
+│   ├── auth/              # Auth callbacks
+│   ├── chats/             # Chat interface
+│   ├── docs/              # Documentation page
+│   ├── login/             # Login page
+│   ├── product/           # Product page
+│   ├── pricing/           # Pricing page
+│   └── register/          # Registration page
+├── components/            # React components
+│   ├── documents/         # Document-related components
+│   ├── layout/            # Header, Footer
+│   └── ui/                # Reusable UI components
+├── lib/                   # Utility functions
+│   ├── documentProcessor.ts  # Text extraction & chunking
+│   ├── llm.ts             # OpenAI integration
+│   └── supabaseClient.ts  # Supabase client
+├── supabase/
+│   └── migrations/        # Database migrations
+└── public/                # Static assets
+```
+
+### Key Files
+
+- `lib/documentProcessor.ts`: Handles PDF, DOCX, TXT, HTML text extraction
+- `lib/llm.ts`: OpenAI API integration for embeddings and chat
+- `app/api/query/route.ts`: RAG query endpoint with vector search
+- `app/api/documents/upload/route.ts`: Document upload and processing
+
+## 🔒 Security
+
+- **Row Level Security (RLS)**: All database tables have RLS enabled
+- **User Isolation**: Users can only access their own documents and conversations
+- **Secure Storage**: Files stored in private Supabase Storage buckets
+- **API Authentication**: All API routes require valid Supabase session tokens
+
+## 📝 License
+
+MIT License - feel free to use this project for your own purposes.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📧 Support
+
+For issues and questions, please open an issue on GitHub.
+
+---
+
+Built with ❤️ using Next.js, Supabase, and OpenAI.
