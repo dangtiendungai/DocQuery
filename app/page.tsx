@@ -89,6 +89,7 @@ export default function Home() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+  const [showAllDocuments, setShowAllDocuments] = useState(false);
   const uploadSectionRef = useRef<HTMLDivElement>(null);
 
   const scrollToUpload = () => {
@@ -277,12 +278,15 @@ export default function Home() {
                 <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-300">
                   Recent uploads
                 </h3>
-                <Button
-                  variant="link"
-                  className="text-xs font-medium text-emerald-200 hover:text-emerald-100"
-                >
-                  View all
-                </Button>
+                {documents.length > 5 && (
+                  <Button
+                    variant="link"
+                    onClick={() => setShowAllDocuments(!showAllDocuments)}
+                    className="text-xs font-medium text-emerald-200 hover:text-emerald-100"
+                  >
+                    {showAllDocuments ? "Show less" : `View all (${documents.length})`}
+                  </Button>
+                )}
               </div>
               <div className="space-y-3">
                 {loading ? (
@@ -292,7 +296,7 @@ export default function Home() {
                     No documents yet. Upload your first file above!
                   </p>
                 ) : (
-                  documents.map((doc) => (
+                  (showAllDocuments ? documents : documents.slice(0, 5)).map((doc) => (
                     <div
                       key={doc.id}
                       className="group flex items-center justify-between rounded-2xl border border-white/5 bg-slate-900/60 px-4 py-3 transition hover:border-white/10"
