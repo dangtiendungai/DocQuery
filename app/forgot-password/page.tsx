@@ -33,7 +33,8 @@ export default function ForgotPasswordPage() {
       if (error) {
         setStatus({
           type: "error",
-          message: error.message || "Failed to send reset email. Please try again.",
+          message:
+            error.message || "Failed to send reset email. Please try again.",
         });
         setIsSubmitting(false);
         return;
@@ -82,8 +83,8 @@ export default function ForgotPasswordPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div aria-live="polite" className="min-h-[1.5rem] text-sm">
-              {status.type !== "idle" && status.message && (
+            {status.type !== "idle" && status.message && (
+              <div aria-live="polite" className="min-h-[1.5rem] text-sm">
                 <div
                   className={`rounded-2xl border px-4 py-3 ${
                     status.type === "success"
@@ -93,8 +94,8 @@ export default function ForgotPasswordPage() {
                 >
                   {status.message}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             <TextField
               id="email"
@@ -135,4 +136,3 @@ export default function ForgotPasswordPage() {
     </div>
   );
 }
-
