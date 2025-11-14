@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { toast } from "react-toastify";
 import { supabase } from "@/lib/supabaseClient";
 import { ArrowLeft, Download, FileText, Loader2, AlertCircle } from "lucide-react";
 import Button from "@/components/ui/Button";
@@ -132,9 +133,10 @@ export default function DocumentViewerPage() {
       window.document.body.appendChild(link);
       link.click();
       window.document.body.removeChild(link);
+      toast.success("Document download started");
     } catch (error) {
       console.error("Error downloading document:", error);
-      alert("Failed to download document. Please try again.");
+      toast.error("Failed to download document. Please try again.");
     } finally {
       setDownloading(false);
     }

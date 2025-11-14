@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import FileUpload from "@/components/documents/FileUpload";
@@ -112,9 +113,7 @@ export default function Home() {
 
   const handleWatchVideo = () => {
     // You can replace this with an actual video URL or modal
-    alert(
-      "Video overview coming soon! This would open a 2-minute overview video."
-    );
+    toast.info("Video overview coming soon! This would open a 2-minute overview video.");
     // Or you could open a modal:
     // setShowVideoModal(true);
   };
@@ -190,13 +189,14 @@ export default function Home() {
       if (response.ok) {
         // Remove from local state
         setDocuments((prev) => prev.filter((doc) => doc.id !== documentId));
+        toast.success("Document deleted successfully");
       } else {
         const error = await response.json();
-        alert(`Failed to delete document: ${error.error || "Unknown error"}`);
+        toast.error(`Failed to delete document: ${error.error || "Unknown error"}`);
       }
     } catch (error) {
       console.error("Error deleting document:", error);
-      alert("Failed to delete document. Please try again.");
+      toast.error("Failed to delete document. Please try again.");
     } finally {
       setDeletingIds((prev) => {
         const next = new Set(prev);

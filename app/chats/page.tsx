@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import TextField from "@/components/ui/TextField";
@@ -462,7 +463,7 @@ export default function ChatsPage() {
 
   const handleExportConversation = (format: "text" | "markdown") => {
     if (!currentConversationId || messages.length <= 1) {
-      alert("No conversation to export");
+      toast.warning("No conversation to export");
       return;
     }
 
@@ -506,7 +507,7 @@ export default function ChatsPage() {
 
   const handleShareConversation = async () => {
     if (!currentConversationId) {
-      alert("No conversation to share");
+      toast.warning("No conversation to share");
       return;
     }
 
@@ -514,9 +515,9 @@ export default function ChatsPage() {
     const success = await copyToClipboard(url);
 
     if (success) {
-      alert("Conversation link copied to clipboard!");
+      toast.success("Conversation link copied to clipboard!");
     } else {
-      alert("Failed to copy link. Please copy manually: " + url);
+      toast.error(`Failed to copy link. Please copy manually: ${url}`);
     }
   };
 

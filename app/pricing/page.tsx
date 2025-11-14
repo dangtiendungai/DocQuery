@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
 import Button from "@/components/ui/Button";
 import { supabase } from "@/lib/supabaseClient";
 import { Loader2 } from "lucide-react";
@@ -173,12 +174,12 @@ export default function PricingPage() {
         // Redirect to Stripe Checkout
         window.location.href = data.url;
       } else if (data.error) {
-        alert(`Error: ${data.error}`);
+        toast.error(`Error: ${data.error}`);
         setLoading(null);
       }
     } catch (error) {
       console.error("Error creating checkout session:", error);
-      alert("Failed to start checkout. Please try again.");
+      toast.error("Failed to start checkout. Please try again.");
       setLoading(null);
     }
   };
