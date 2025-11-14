@@ -9,10 +9,10 @@ import Button from "@/components/ui/Button";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 const navItems = [
-  { label: "Product", href: "/" },
+  { label: "Product", href: "/product" },
   { label: "Pricing", href: "/pricing" },
   { label: "Chats", href: "/chats" },
-  { label: "Docs", href: "#" },
+  { label: "Docs", href: "/docs" },
 ];
 
 export default function Header() {
