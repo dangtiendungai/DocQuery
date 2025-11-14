@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { LogOut } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import Button from "@/components/ui/Button";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
@@ -71,14 +71,26 @@ export default function Header() {
         {!loading && (
           <div className="hidden items-center gap-3 sm:flex">
             {user ? (
-              <Button
-                variant="icon"
-                onClick={handleLogout}
-                className="rounded-full"
-                aria-label="Log out"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
+              <>
+                <Link href="/profile">
+                  <Button
+                    variant="icon"
+                    className="rounded-full"
+                    aria-label="Profile"
+                    title="Profile"
+                  >
+                    <User className="h-4 w-4" />
+                  </Button>
+                </Link>
+                <Button
+                  variant="icon"
+                  onClick={handleLogout}
+                  className="rounded-full"
+                  aria-label="Log out"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </>
             ) : (
               <>
                 <Link
@@ -106,14 +118,25 @@ export default function Header() {
           </Link>
         )}
         {!loading && user && (
-          <Button
-            variant="icon"
-            onClick={handleLogout}
-            className="rounded-full sm:hidden"
-            aria-label="Log out"
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2 sm:hidden">
+            <Link href="/profile">
+              <Button
+                variant="icon"
+                className="rounded-full"
+                aria-label="Profile"
+              >
+                <User className="h-4 w-4" />
+              </Button>
+            </Link>
+            <Button
+              variant="icon"
+              onClick={handleLogout}
+              className="rounded-full"
+              aria-label="Log out"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         )}
       </div>
     </header>
