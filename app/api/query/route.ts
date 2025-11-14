@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { generateAnswer, generateEmbedding, isOpenAIConfigured } from "@/lib/llm";
+import {
+  generateAnswer,
+  generateEmbedding,
+  isOpenAIConfigured,
+} from "@/lib/llm";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -144,7 +148,10 @@ export async function POST(request: NextRequest) {
           }
         }
       } catch (embeddingError) {
-        console.error("Error with vector search, falling back to text search:", embeddingError);
+        console.error(
+          "Error with vector search, falling back to text search:",
+          embeddingError
+        );
         // Fall through to text search
       }
     }
@@ -188,9 +195,7 @@ export async function POST(request: NextRequest) {
           name: doc?.name || "Unknown",
           fileType: doc?.file_type || "unknown",
         },
-        citation: `${doc?.name || "Unknown"} · Chunk ${
-          chunk.chunk_index + 1
-        }`,
+        citation: `${doc?.name || "Unknown"} · Chunk ${chunk.chunk_index + 1}`,
       };
     });
 

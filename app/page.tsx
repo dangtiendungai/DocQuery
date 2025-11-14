@@ -2,8 +2,10 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Button from "@/components/ui/Button";
 import FileUpload from "@/components/documents/FileUpload";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { Bot, FileUp, Lock, ShieldCheck, Trash2, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -90,6 +92,15 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const [showAllDocuments, setShowAllDocuments] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    documentId: string | null;
+    documentName: string | null;
+  }>({
+    open: false,
+    documentId: null,
+    documentName: null,
+  });
   const uploadSectionRef = useRef<HTMLDivElement>(null);
 
   const scrollToUpload = () => {
@@ -144,12 +155,20 @@ export default function Home() {
     fetchDocuments();
   };
 
-  const handleDeleteDocument = async (documentId: string) => {
-    if (!confirm("Are you sure you want to delete this document? This action cannot be undone.")) {
-      return;
-    }
+  const handleDeleteClick = (documentId: string, documentName: string) => {
+    setDeleteDialog({
+      open: true,
+      documentId,
+      documentName,
+    });
+  };
 
+  const handleDeleteConfirm = async () => {
+    if (!deleteDialog.documentId) return;
+
+    const documentId = deleteDialog.documentId;
     setDeletingIds((prev) => new Set(prev).add(documentId));
+    setDeleteDialog({ open: false, documentId: null, documentName: null });
 
     try {
       const {
@@ -185,6 +204,10 @@ export default function Home() {
         return next;
       });
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialog({ open: false, documentId: null, documentName: null });
   };
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
@@ -284,7 +307,9 @@ export default function Home() {
                     onClick={() => setShowAllDocuments(!showAllDocuments)}
                     className="text-xs font-medium text-emerald-200 hover:text-emerald-100"
                   >
-                    {showAllDocuments ? "Show less" : `View all (${documents.length})`}
+                    {showAllDocuments
+                      ? "Show less"
+                      : `View all (${documents.length})`}
                   </Button>
                 )}
               </div>
@@ -296,40 +321,45 @@ export default function Home() {
                     No documents yet. Upload your first file above!
                   </p>
                 ) : (
-                  (showAllDocuments ? documents : documents.slice(0, 5)).map((doc) => (
-                    <div
-                      key={doc.id}
-                      className="group flex items-center justify-between rounded-2xl border border-white/5 bg-slate-900/60 px-4 py-3 transition hover:border-white/10"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-white truncate">
-                          {doc.name}
-                        </p>
-                        <p className="text-xs text-slate-400">
-                          {formatFileSize(doc.file_size)}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-medium text-slate-300">
-                          {doc.status === "processed"
-                            ? `Processed • ${doc.chunk_count} chunks`
-                            : doc.status}
-                        </span>
-                        <button
-                          onClick={() => handleDeleteDocument(doc.id)}
-                          disabled={deletingIds.has(doc.id)}
-                          className="opacity-0 group-hover:opacity-100 transition p-1.5 hover:bg-red-500/20 rounded-lg disabled:opacity-50"
-                          aria-label="Delete document"
+                  (showAllDocuments ? documents : documents.slice(0, 5)).map(
+                    (doc) => (
+                      <div
+                        key={doc.id}
+                        className="group flex items-center justify-between rounded-2xl border border-white/5 bg-slate-900/60 px-4 py-3 transition hover:border-white/10"
+                      >
+                        <Link
+                          href={`/documents/${doc.id}`}
+                          className="flex-1 min-w-0 cursor-pointer"
                         >
-                          {deletingIds.has(doc.id) ? (
-                            <Loader2 className="h-4 w-4 animate-spin text-red-400" />
-                          ) : (
-                            <Trash2 className="h-4 w-4 text-red-400" />
-                          )}
-                        </button>
+                          <p className="text-sm font-medium text-white truncate hover:text-emerald-300 transition">
+                            {doc.name}
+                          </p>
+                          <p className="text-xs text-slate-400">
+                            {formatFileSize(doc.file_size)}
+                          </p>
+                        </Link>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-medium text-slate-300">
+                            {doc.status === "processed"
+                              ? `Processed • ${doc.chunk_count} chunks`
+                              : doc.status}
+                          </span>
+                          <button
+                            onClick={() => handleDeleteClick(doc.id, doc.name)}
+                            disabled={deletingIds.has(doc.id)}
+                            className="opacity-0 group-hover:opacity-100 transition p-1.5 hover:bg-red-500/20 rounded-lg disabled:opacity-50"
+                            aria-label="Delete document"
+                          >
+                            {deletingIds.has(doc.id) ? (
+                              <Loader2 className="h-4 w-4 animate-spin text-red-400" />
+                            ) : (
+                              <Trash2 className="h-4 w-4 text-red-400" />
+                            )}
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    )
+                  )
                 )}
               </div>
             </div>
@@ -351,7 +381,7 @@ export default function Home() {
                   variant="ghost"
                   size="sm"
                   className="rounded-full border-white/10 text-slate-200 hover:border-white/30 hover:text-white"
-                  onClick={() => router.push('/chats')}
+                  onClick={() => router.push("/chats")}
                 >
                   Launch playground
                 </Button>
@@ -423,6 +453,23 @@ export default function Home() {
           </div>
         </section>
       </main>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteDialog.open}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Document"
+        message={
+          deleteDialog.documentName
+            ? `Are you sure you want to delete "${deleteDialog.documentName}"? This action cannot be undone.`
+            : "Are you sure you want to delete this document? This action cannot be undone."
+        }
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        loading={deleteDialog.documentId ? deletingIds.has(deleteDialog.documentId) : false}
+      />
     </div>
   );
 }

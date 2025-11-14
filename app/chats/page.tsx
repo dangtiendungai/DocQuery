@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Button from "@/components/ui/Button";
 import { supabase } from "@/lib/supabaseClient";
 import { Bot, Loader2, Plus, FileText, Trash2, MessageSquare } from "lucide-react";
@@ -17,6 +18,11 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   citations?: string[];
+  sources?: Array<{
+    documentId: string;
+    documentName: string;
+    chunkIndex: number;
+  }>;
 }
 
 interface Conversation {
@@ -245,6 +251,8 @@ export default function ChatsPage() {
         return;
       }
 
+      // Note: sources are stored in memory but not persisted to DB yet
+      // We can add a sources column to messages table later if needed
       await fetch("/api/messages", {
         method: "POST",
         headers: {
@@ -342,6 +350,7 @@ export default function ChatsPage() {
           role: "assistant",
           content: data.answer,
           citations: data.citations,
+          sources: data.sources,
         };
         setMessages((prev) => [...prev, assistantMsg]);
         await saveMessage(assistantMsg, conversationId);
@@ -456,9 +465,10 @@ export default function ChatsPage() {
               </h2>
               <div className="mt-4 space-y-2">
                 {documents.slice(0, 5).map((doc) => (
-                  <div
+                  <Link
                     key={doc.id}
-                    className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2"
+                    href={`/documents/${doc.id}`}
+                    className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 transition hover:border-white/20 hover:bg-white/10"
                   >
                     <FileText className="h-4 w-4 text-slate-400" />
                     <div className="flex-1 min-w-0">
@@ -471,7 +481,7 @@ export default function ChatsPage() {
                           : doc.status}
                       </p>
                     </div>
-                  </div>
+                  </Link>
                 ))}
                 {documents.length > 5 && (
                   <Button
@@ -574,9 +584,25 @@ export default function ChatsPage() {
                                   Sources:
                                 </p>
                                 <ul className="list-disc list-inside space-y-1 text-xs text-emerald-200/80">
-                                  {message.citations.map((citation, i) => (
-                                    <li key={i}>{citation}</li>
-                                  ))}
+                                  {message.citations.map((citation, i) => {
+                                    // Try to find the source document and chunk
+                                    const source = message.sources?.[i];
+                                    if (source) {
+                                      return (
+                                        <li key={i}>
+                                          <a
+                                            href={`/documents/${source.documentId}?chunk=${source.chunkIndex}`}
+                                            className="hover:text-emerald-300 hover:underline transition"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                          >
+                                            {citation}
+                                          </a>
+                                        </li>
+                                      );
+                                    }
+                                    return <li key={i}>{citation}</li>;
+                                  })}
                                 </ul>
                               </div>
                             )}
