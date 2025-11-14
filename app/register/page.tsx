@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Link from "next/link";
 import Button from "@/components/ui/Button";
 import TextField from "@/components/ui/TextField";
 import { supabase } from "@/lib/supabaseClient";
@@ -80,7 +81,9 @@ export default function RegisterPage() {
       }
 
       // Redirect to verify-email page
-      window.location.href = `/verify-email?email=${encodeURIComponent(trimmedEmail)}`;
+      window.location.href = `/verify-email?email=${encodeURIComponent(
+        trimmedEmail
+      )}`;
     } catch (error) {
       setStatus({
         variant: "error",
@@ -213,19 +216,23 @@ export default function RegisterPage() {
                 />
                 <label htmlFor="tos">
                   I agree to the{" "}
-                  <a
+                  <Link
                     className="text-emerald-300 hover:text-emerald-200"
-                    href="#"
+                    href="/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
                   >
                     Terms
-                  </a>{" "}
+                  </Link>{" "}
                   and{" "}
-                  <a
+                  <Link
                     className="text-emerald-300 hover:text-emerald-200"
-                    href="#"
+                    href="/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
                   >
                     Privacy Policy
-                  </a>
+                  </Link>
                   .
                 </label>
               </div>

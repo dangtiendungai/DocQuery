@@ -28,7 +28,10 @@ export default function LoginPage() {
 
       if (signInError) {
         // Check if error is due to unverified email
-        if (signInError.message?.includes("email") && signInError.message?.includes("confirm")) {
+        if (
+          signInError.message?.includes("email") &&
+          signInError.message?.includes("confirm")
+        ) {
           setError(
             "Please verify your email address before signing in. Check your inbox for the verification link."
           );
@@ -182,13 +185,23 @@ export default function LoginPage() {
               </Button>
               <p className="text-xs text-slate-400">
                 By signing in you agree to our{" "}
-                <a className="text-emerald-300 hover:text-emerald-200" href="#">
+                <Link
+                  className="text-emerald-300 hover:text-emerald-200"
+                  href="/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   Terms
-                </a>{" "}
+                </Link>{" "}
                 and{" "}
-                <a className="text-emerald-300 hover:text-emerald-200" href="#">
+                <Link
+                  className="text-emerald-300 hover:text-emerald-200"
+                  href="/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   Privacy Policy
-                </a>
+                </Link>
                 .
               </p>
             </div>
