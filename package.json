@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@stripe/stripe-js": "^8.4.0",
     "@supabase/supabase-js": "^2.81.1",
     "lucide-react": "^0.553.0",
     "mammoth": "^1.11.0",
@@ -16,7 +17,8 @@
     "openai": "^6.8.1",
     "pdf-parse": "^2.4.5",
     "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "stripe": "^19.3.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
