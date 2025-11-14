@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, ChevronDown } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import Button from "@/components/ui/Button";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
@@ -19,6 +19,8 @@ export default function Header() {
   const router = useRouter();
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Get initial session
@@ -38,10 +40,57 @@ export default function Header() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowDropdown(false);
+      }
+    };
+
+    if (showDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showDropdown]);
+
+  // Close dropdown on Escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && showDropdown) {
+        setShowDropdown(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [showDropdown]);
+
   const handleLogout = async () => {
+    setShowDropdown(false);
     await supabase.auth.signOut();
     router.push("/");
     router.refresh();
+  };
+
+  const getUserDisplayName = (): string => {
+    if (!user) return "";
+    const metadata = user.user_metadata || {};
+    const firstName = metadata.first_name || "";
+    const lastName = metadata.last_name || "";
+
+    if (firstName || lastName) {
+      return `${firstName} ${lastName}`.trim();
+    }
+
+    // Fallback to email if no name
+    return user.email?.split("@")[0] || "User";
   };
 
   return (
@@ -71,26 +120,47 @@ export default function Header() {
         {!loading && (
           <div className="hidden items-center gap-3 sm:flex">
             {user ? (
-              <>
-                <Link href="/profile">
-                  <Button
-                    variant="icon"
-                    className="rounded-full"
-                    aria-label="Profile"
-                    title="Profile"
-                  >
-                    <User className="h-4 w-4" />
-                  </Button>
-                </Link>
+              <div className="relative" ref={dropdownRef}>
                 <Button
-                  variant="icon"
-                  onClick={handleLogout}
-                  className="rounded-full"
-                  aria-label="Log out"
+                  variant="ghost"
+                  onClick={() => setShowDropdown(!showDropdown)}
+                  className="flex items-center gap-2 rounded-full border border-white/15 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-white/30 hover:text-white"
+                  aria-label="User menu"
+                  aria-expanded={showDropdown}
                 >
-                  <LogOut className="h-4 w-4" />
+                  <User className="h-4 w-4" />
+                  <span className="max-w-[120px] truncate">
+                    {getUserDisplayName()}
+                  </span>
+                  <ChevronDown
+                    className={`h-3 w-3 transition-transform ${
+                      showDropdown ? "rotate-180" : ""
+                    }`}
+                  />
                 </Button>
-              </>
+
+                {showDropdown && (
+                  <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-2xl border border-white/10 bg-slate-900 shadow-2xl backdrop-blur">
+                    <div className="p-2">
+                      <Link
+                        href="/profile"
+                        onClick={() => setShowDropdown(false)}
+                        className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-200 transition hover:bg-white/10 hover:text-white"
+                      >
+                        <User className="h-4 w-4" />
+                        <span>My Profile</span>
+                      </Link>
+                      <button
+                        onClick={handleLogout}
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-200 transition hover:bg-red-500/20 hover:text-red-400"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        <span>Logout</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
               <>
                 <Link
@@ -118,24 +188,46 @@ export default function Header() {
           </Link>
         )}
         {!loading && user && (
-          <div className="flex items-center gap-2 sm:hidden">
-            <Link href="/profile">
-              <Button
-                variant="icon"
-                className="rounded-full"
-                aria-label="Profile"
-              >
-                <User className="h-4 w-4" />
-              </Button>
-            </Link>
+          <div className="relative sm:hidden" ref={dropdownRef}>
             <Button
               variant="icon"
-              onClick={handleLogout}
+              onClick={() => setShowDropdown(!showDropdown)}
               className="rounded-full"
-              aria-label="Log out"
+              aria-label="User menu"
+              aria-expanded={showDropdown}
             >
-              <LogOut className="h-4 w-4" />
+              <User className="h-4 w-4" />
             </Button>
+
+            {showDropdown && (
+              <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-2xl border border-white/10 bg-slate-900 shadow-2xl backdrop-blur">
+                <div className="p-2">
+                  <div className="mb-2 border-b border-white/10 px-3 py-2">
+                    <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
+                      {getUserDisplayName()}
+                    </p>
+                    <p className="mt-1 truncate text-sm text-slate-300">
+                      {user.email}
+                    </p>
+                  </div>
+                  <Link
+                    href="/profile"
+                    onClick={() => setShowDropdown(false)}
+                    className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-200 transition hover:bg-white/10 hover:text-white"
+                  >
+                    <User className="h-4 w-4" />
+                    <span>My Profile</span>
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-200 transition hover:bg-red-500/20 hover:text-red-400"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
