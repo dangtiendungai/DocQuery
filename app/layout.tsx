@@ -20,6 +20,31 @@ export const metadata: Metadata = {
   title: "DocQuery · Retrieval-Augmented Answers",
   description:
     "Upload documents, chat with grounded answers, and keep every response cited with DocQuery.",
+  openGraph: {
+    title: "DocQuery · Retrieval-Augmented Answers",
+    description:
+      "Upload documents, chat with grounded answers, and keep every response cited with DocQuery.",
+    url: "https://doc-query-six.vercel.app",
+    siteName: "DocQuery",
+    images: [
+      {
+        url: "https://doc-query-six.vercel.app/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "DocQuery - Retrieval-Augmented Answers for your documents",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "DocQuery · Retrieval-Augmented Answers",
+    description:
+      "Upload documents, chat with grounded answers, and keep every response cited with DocQuery.",
+    images: ["https://doc-query-six.vercel.app/opengraph-image"],
+  },
+  metadataBase: new URL("https://doc-query-six.vercel.app"),
 };
 
 export default function RootLayout({
