@@ -75,6 +75,23 @@ export async function POST(request: NextRequest) {
       // Use service role key to upsert subscription
       const serviceSupabase = createClient(supabaseUrl, supabaseServiceKey);
 
+      // Safely convert timestamps to ISO strings
+      const currentPeriodStart =
+        (subscription as any).current_period_start &&
+        typeof (subscription as any).current_period_start === "number"
+          ? new Date(
+              (subscription as any).current_period_start * 1000
+            ).toISOString()
+          : null;
+
+      const currentPeriodEnd =
+        (subscription as any).current_period_end &&
+        typeof (subscription as any).current_period_end === "number"
+          ? new Date(
+              (subscription as any).current_period_end * 1000
+            ).toISOString()
+          : null;
+
       const { data: subscriptionData, error: upsertError } =
         await serviceSupabase.from("subscriptions").upsert(
           {
@@ -84,13 +101,10 @@ export async function POST(request: NextRequest) {
             stripe_price_id: subscription.items.data[0]?.price.id,
             plan: session.metadata?.plan || "unknown",
             status: subscription.status,
-            current_period_start: new Date(
-              (subscription as any).current_period_start * 1000
-            ).toISOString(),
-            current_period_end: new Date(
-              (subscription as any).current_period_end * 1000
-            ).toISOString(),
-            cancel_at_period_end: (subscription as any).cancel_at_period_end,
+            current_period_start: currentPeriodStart,
+            current_period_end: currentPeriodEnd,
+            cancel_at_period_end:
+              (subscription as any).cancel_at_period_end || false,
             updated_at: new Date().toISOString(),
           },
           {
