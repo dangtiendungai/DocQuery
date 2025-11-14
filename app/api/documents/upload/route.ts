@@ -6,16 +6,36 @@ import {
   getFileType,
   type SupportedFileType,
 } from "@/lib/documentProcessor";
-import {
-  generateEmbeddingsBatch,
-  isOpenAIConfigured,
-} from "@/lib/llm";
+import { generateEmbeddingsBatch, isOpenAIConfigured } from "@/lib/llm";
+import { rateLimiters, getUserIdentifier } from "@/lib/rateLimit";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const identifier = getUserIdentifier(request);
+    const rateLimitResult = await rateLimiters.upload(request, identifier);
+
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        {
+          error: rateLimitResult.message || "Rate limit exceeded",
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": rateLimitResult.retryAfter?.toString() || "3600",
+            "X-RateLimit-Limit": "10",
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Reset": new Date(
+              Date.now() + (rateLimitResult.retryAfter || 3600) * 1000
+            ).toISOString(),
+          },
+        }
+      );
+    }
     // Get the authenticated user
     const authHeader = request.headers.get("authorization");
     if (!authHeader) {
@@ -183,15 +203,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      document: {
-        id: documentData.id,
-        name: documentData.name,
-        chunkCount: chunks.length,
-        status: documentData.status,
+    return NextResponse.json(
+      {
+        success: true,
+        document: {
+          id: documentData.id,
+          name: documentData.name,
+          chunkCount: chunks.length,
+          status: documentData.status,
+        },
       },
-    });
+      {
+        headers: {
+          "X-RateLimit-Limit": "10",
+          "X-RateLimit-Remaining": rateLimitResult.remaining?.toString() || "0",
+        },
+      }
+    );
   } catch (error) {
     console.error("Upload error:", error);
     return NextResponse.json(

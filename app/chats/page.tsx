@@ -5,7 +5,22 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import { supabase } from "@/lib/supabaseClient";
-import { Bot, Loader2, Plus, FileText, Trash2, MessageSquare } from "lucide-react";
+import {
+  Bot,
+  Loader2,
+  Plus,
+  FileText,
+  Trash2,
+  MessageSquare,
+  Download,
+  Share2,
+} from "lucide-react";
+import {
+  exportConversationAsText,
+  exportConversationAsMarkdown,
+  downloadTextAsFile,
+  copyToClipboard,
+} from "@/lib/export";
 
 const suggestions = [
   "Summarize the changes between Warranty_v4 and Warranty_v5",
@@ -43,7 +58,9 @@ interface Document {
 export default function ChatsPage() {
   const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [currentConversationId, setCurrentConversationId] = useState<
+    string | null
+  >(null);
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
@@ -205,7 +222,10 @@ export default function ChatsPage() {
     }
   };
 
-  const deleteConversation = async (conversationId: string, e: React.MouseEvent) => {
+  const deleteConversation = async (
+    conversationId: string,
+    e: React.MouseEvent
+  ) => {
     e.stopPropagation();
     try {
       const {
@@ -396,6 +416,66 @@ export default function ChatsPage() {
     router.push("/");
   };
 
+  const handleExportConversation = (format: "text" | "markdown") => {
+    if (!currentConversationId || messages.length <= 1) {
+      alert("No conversation to export");
+      return;
+    }
+
+    const currentConversation = conversations.find(
+      (c) => c.id === currentConversationId
+    );
+
+    const exportableConversation = {
+      title: currentConversation?.title || "Untitled Conversation",
+      messages: messages
+        .filter(
+          (m) =>
+            m.role !== "assistant" ||
+            m.content !==
+              "Hello! I'm DocQuery. Ask me anything about your uploaded documents, and I'll search through them to find relevant answers."
+        )
+        .map((m) => ({
+          role: m.role,
+          content: m.content,
+          citations: m.citations,
+        })),
+      createdAt: currentConversation?.created_at,
+      exportedAt: new Date().toISOString(),
+    };
+
+    const content =
+      format === "markdown"
+        ? exportConversationAsMarkdown(exportableConversation)
+        : exportConversationAsText(exportableConversation);
+
+    const filename = `${exportableConversation.title.replace(
+      /[^a-z0-9]/gi,
+      "_"
+    )}.${format === "markdown" ? "md" : "txt"}`;
+    downloadTextAsFile(
+      content,
+      filename,
+      format === "markdown" ? "text/markdown" : "text/plain"
+    );
+  };
+
+  const handleShareConversation = async () => {
+    if (!currentConversationId) {
+      alert("No conversation to share");
+      return;
+    }
+
+    const url = `${window.location.origin}/chats/${currentConversationId}`;
+    const success = await copyToClipboard(url);
+
+    if (success) {
+      alert("Conversation link copied to clipboard!");
+    } else {
+      alert("Failed to copy link. Please copy manually: " + url);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[320px_1fr] px-6 py-16 lg:px-12">
@@ -530,14 +610,47 @@ export default function ChatsPage() {
                     : "Upload documents to start asking questions. Go to the home page to upload your first files."}
                 </p>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleManageSources}
-                className="rounded-full border-white/15 text-slate-200 hover:border-white/30 hover:text-white"
-              >
-                Manage sources
-              </Button>
+              <div className="flex items-center gap-2">
+                {currentConversationId && messages.length > 1 && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleExportConversation("text")}
+                      className="rounded-full border-white/15 text-slate-200 hover:border-white/30 hover:text-white"
+                      title="Export as text"
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleExportConversation("markdown")}
+                      className="rounded-full border-white/15 text-slate-200 hover:border-white/30 hover:text-white"
+                      title="Export as markdown"
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleShareConversation}
+                      className="rounded-full border-white/15 text-slate-200 hover:border-white/30 hover:text-white"
+                      title="Share conversation"
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleManageSources}
+                  className="rounded-full border-white/15 text-slate-200 hover:border-white/30 hover:text-white"
+                >
+                  Manage sources
+                </Button>
+              </div>
             </div>
 
             <div className="mt-6 rounded-2xl border border-white/10 bg-slate-950/80 p-4 text-sm text-slate-300 max-h-[500px] overflow-y-auto">

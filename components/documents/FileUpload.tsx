@@ -14,11 +14,18 @@ interface UploadingFile {
 }
 
 interface FileUploadProps {
-  onUploadComplete?: (document: { id: string; name: string; chunkCount: number }) => void;
+  onUploadComplete?: (document: {
+    id: string;
+    name: string;
+    chunkCount: number;
+  }) => void;
   onError?: (error: string) => void;
 }
 
-export default function FileUpload({ onUploadComplete, onError }: FileUploadProps = {}) {
+export default function FileUpload({
+  onUploadComplete,
+  onError,
+}: FileUploadProps = {}) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
@@ -64,11 +71,19 @@ export default function FileUpload({ onUploadComplete, onError }: FileUploadProp
 
     // Validate files
     const validFiles = files.filter((file) => {
-      const validTypes = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain", "text/html"];
+      const validTypes = [
+        "application/pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "text/plain",
+        "text/html",
+      ];
       const validExtensions = [".pdf", ".docx", ".txt", ".html", ".htm"];
       const extension = "." + file.name.split(".").pop()?.toLowerCase();
 
-      if (!validTypes.includes(file.type) && !validExtensions.includes(extension)) {
+      if (
+        !validTypes.includes(file.type) &&
+        !validExtensions.includes(extension)
+      ) {
         setError(`Unsupported file type: ${file.name}`);
         return false;
       }
@@ -111,6 +126,11 @@ export default function FileUpload({ onUploadComplete, onError }: FileUploadProp
       const formData = new FormData();
       formData.append("file", file);
 
+      // Update progress to show upload started
+      setUploadingFiles((prev) =>
+        prev.map((uf) => (uf.file === file ? { ...uf, progress: 10 } : uf))
+      );
+
       const response = await fetch("/api/documents/upload", {
         method: "POST",
         headers: {
@@ -118,6 +138,11 @@ export default function FileUpload({ onUploadComplete, onError }: FileUploadProp
         },
         body: formData,
       });
+
+      // Update progress during processing
+      setUploadingFiles((prev) =>
+        prev.map((uf) => (uf.file === file ? { ...uf, progress: 50 } : uf))
+      );
 
       // Check if response is JSON
       const contentType = response.headers.get("content-type");
@@ -149,7 +174,8 @@ export default function FileUpload({ onUploadComplete, onError }: FileUploadProp
         onUploadComplete({
           id: data.document.id,
           name: data.document.name,
-          chunkCount: data.document.chunkCount || data.document.chunk_count || 0,
+          chunkCount:
+            data.document.chunkCount || data.document.chunk_count || 0,
         });
       }
 
@@ -158,7 +184,8 @@ export default function FileUpload({ onUploadComplete, onError }: FileUploadProp
         setUploadingFiles((prev) => prev.filter((uf) => uf.file !== file));
       }, 3000);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Upload failed";
+      const errorMessage =
+        error instanceof Error ? error.message : "Upload failed";
       setUploadingFiles((prev) =>
         prev.map((uf) =>
           uf.file === file
@@ -270,4 +297,3 @@ export default function FileUpload({ onUploadComplete, onError }: FileUploadProp
     </div>
   );
 }
-
