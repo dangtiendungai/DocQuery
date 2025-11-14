@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Button from "@/components/ui/Button";
+import TextField from "@/components/ui/TextField";
 
 const scenarios = [
   {
@@ -47,21 +48,15 @@ export default function PlaygroundPage() {
 
         <div className="mt-16 grid gap-6 md:grid-cols-[3fr,2fr]">
           <div className="rounded-3xl border border-white/10 bg-slate-900/60 p-6">
-            <div className="flex flex-col gap-2">
-              <label
-                htmlFor="prompt"
-                className="text-sm font-medium text-slate-200"
-              >
-                Prompt
-              </label>
-              <textarea
-                id="prompt"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                className="h-28 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/50"
-                placeholder="Enter your prompt..."
-              />
-            </div>
+            <TextField
+              id="prompt"
+              label="Prompt"
+              multiline
+              rows={5}
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Enter your prompt..."
+            />
             <div className="mt-6 flex flex-col gap-2">
               <label className="text-sm font-medium text-slate-200">
                 Answer preview

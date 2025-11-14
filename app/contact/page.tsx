@@ -153,24 +153,18 @@ export default function ContactPage() {
               placeholder="Your company"
               disabled={isSubmitting}
             />
-            <div className="flex flex-col gap-2">
-              <label
-                htmlFor="message"
-                className="text-sm font-medium text-slate-200"
-              >
-                Message
-              </label>
-              <textarea
-                id="message"
-                name="message"
-                value={form.message}
-                onChange={(e) => setForm({ ...form, message: e.target.value })}
-                className="h-32 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 disabled:opacity-50 disabled:cursor-not-allowed"
-                placeholder="Your message..."
-                required
-                disabled={isSubmitting}
-              />
-            </div>
+            <TextField
+              id="message"
+              name="message"
+              label="Message"
+              multiline
+              rows={6}
+              value={form.message}
+              onChange={(e) => setForm({ ...form, message: e.target.value })}
+              placeholder="Your message..."
+              required
+              disabled={isSubmitting}
+            />
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? "Sending..." : "Send message"}
             </Button>

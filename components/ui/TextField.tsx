@@ -1,15 +1,34 @@
 "use client";
 
-import { InputHTMLAttributes, ReactNode, useMemo, useState } from "react";
+import {
+  InputHTMLAttributes,
+  TextareaHTMLAttributes,
+  ReactNode,
+  useMemo,
+  useState,
+} from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/cn";
 
-type TextFieldProps = InputHTMLAttributes<HTMLInputElement> & {
+type TextFieldProps = {
   label?: ReactNode;
   description?: string;
   wrapperClassName?: string;
   hideLabel?: boolean;
-};
+  multiline?: boolean;
+  rows?: number;
+  inputRef?: React.Ref<HTMLInputElement>;
+  textareaRef?: React.Ref<HTMLTextAreaElement>;
+} & (
+  | (Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & {
+      type?: InputHTMLAttributes<HTMLInputElement>["type"];
+      multiline?: false;
+    })
+  | (TextareaHTMLAttributes<HTMLTextAreaElement> & {
+      multiline: true;
+      type?: never;
+    })
+);
 
 export default function TextField({
   id,
@@ -19,6 +38,10 @@ export default function TextField({
   wrapperClassName,
   hideLabel = false,
   type = "text",
+  multiline = false,
+  rows = 4,
+  inputRef,
+  textareaRef,
   ...props
 }: TextFieldProps) {
   const { ["aria-label"]: ariaLabel, ...restProps } =
@@ -29,12 +52,19 @@ export default function TextField({
   const computedAriaLabel =
     hideLabel && typeof label === "string" && !ariaLabel ? label : ariaLabel;
 
-  const isPasswordField = type === "password";
+  const isPasswordField = type === "password" && !multiline;
   const [isVisible, setIsVisible] = useState(false);
 
   const resolvedType = useMemo(
     () => (isPasswordField && isVisible ? "text" : type),
     [isPasswordField, isVisible, type]
+  );
+
+  const baseInputClasses = cn(
+    "w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/50",
+    isPasswordField ? "pr-20" : "",
+    multiline && "resize-y min-h-[100px]",
+    className
   );
 
   return (
@@ -45,17 +75,25 @@ export default function TextField({
         </label>
       )}
       <div className="relative">
-        <input
-          id={id}
-          type={resolvedType}
-          aria-label={computedAriaLabel}
-          className={cn(
-            "w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/50",
-            isPasswordField ? "pr-20" : "",
-            className
-          )}
-          {...(restProps as InputHTMLAttributes<HTMLInputElement>)}
-        />
+        {multiline ? (
+          <textarea
+            id={id}
+            rows={rows}
+            ref={textareaRef}
+            aria-label={computedAriaLabel}
+            className={baseInputClasses}
+            {...(restProps as TextareaHTMLAttributes<HTMLTextAreaElement>)}
+          />
+        ) : (
+          <input
+            id={id}
+            type={resolvedType}
+            ref={inputRef}
+            aria-label={computedAriaLabel}
+            className={baseInputClasses}
+            {...(restProps as InputHTMLAttributes<HTMLInputElement>)}
+          />
+        )}
         {isPasswordField && (
           <button
             type="button"

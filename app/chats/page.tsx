@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
+import TextField from "@/components/ui/TextField";
 import { supabase } from "@/lib/supabaseClient";
 import {
   Bot,
@@ -744,14 +745,17 @@ export default function ChatsPage() {
             </div>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <textarea
-                ref={textareaRef}
+              <TextField
+                multiline
+                rows={5}
+                textareaRef={textareaRef}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Ask DocQuery anything about your knowledge base..."
-                className="min-h-[120px] flex-1 rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 resize-none"
+                className="min-h-[120px] flex-1 resize-none"
                 disabled={loading}
+                hideLabel
               />
               <Button
                 onClick={handleSend}
