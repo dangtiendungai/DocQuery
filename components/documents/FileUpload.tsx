@@ -88,8 +88,8 @@ export default function FileUpload() {
     setUploadingFiles((prev) => [...prev, ...newUploadingFiles]);
 
     // Upload each file
-    for (const uploadFile of newUploadingFiles) {
-      await uploadFile(uploadFile.file, user.id);
+    for (const uploadingFileItem of newUploadingFiles) {
+      await uploadFile(uploadingFileItem.file, user.id);
     }
   };
 
