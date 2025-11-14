@@ -52,12 +52,16 @@ export default function Header() {
     };
 
     if (showDropdown) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
+      // Use a small delay to allow menu item clicks to execute first
+      const timeoutId = setTimeout(() => {
+        document.addEventListener("click", handleClickOutside);
+      }, 0);
 
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+      return () => {
+        clearTimeout(timeoutId);
+        document.removeEventListener("click", handleClickOutside);
+      };
+    }
   }, [showDropdown]);
 
   // Close dropdown on Escape key
@@ -73,10 +77,13 @@ export default function Header() {
   }, [showDropdown]);
 
   const handleLogout = async () => {
-    setShowDropdown(false);
-    await supabase.auth.signOut();
-    router.push("/");
-    router.refresh();
+    try {
+      await supabase.auth.signOut();
+      router.push("/");
+      router.refresh();
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   const getUserDisplayName = (): string => {
@@ -124,7 +131,7 @@ export default function Header() {
                 <Button
                   variant="ghost"
                   onClick={() => setShowDropdown(!showDropdown)}
-                  className="flex items-center gap-2 rounded-full border border-white/15 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-white/30 hover:text-white"
+                  className="flex items-center gap-2 rounded-full border border-white/15 !px-4 !py-2.5 text-sm font-semibold text-slate-200 transition hover:border-white/30 hover:text-white"
                   aria-label="User menu"
                   aria-expanded={showDropdown}
                 >
@@ -133,7 +140,7 @@ export default function Header() {
                     {getUserDisplayName()}
                   </span>
                   <ChevronDown
-                    className={`h-3 w-3 transition-transform ${
+                    className={`h-4 w-4 transition-transform ${
                       showDropdown ? "rotate-180" : ""
                     }`}
                   />
@@ -144,14 +151,25 @@ export default function Header() {
                     <div className="p-2">
                       <Link
                         href="/profile"
-                        onClick={() => setShowDropdown(false)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setShowDropdown(false);
+                          router.push("/profile");
+                        }}
                         className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-200 transition hover:bg-white/10 hover:text-white"
                       >
                         <User className="h-4 w-4" />
                         <span>My Profile</span>
                       </Link>
                       <button
-                        onClick={handleLogout}
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setShowDropdown(false);
+                          handleLogout();
+                        }}
                         className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-200 transition hover:bg-red-500/20 hover:text-red-400"
                       >
                         <LogOut className="h-4 w-4" />
@@ -191,7 +209,10 @@ export default function Header() {
           <div className="relative sm:hidden" ref={dropdownRef}>
             <Button
               variant="icon"
-              onClick={() => setShowDropdown(!showDropdown)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDropdown(!showDropdown);
+              }}
               className="rounded-full"
               aria-label="User menu"
               aria-expanded={showDropdown}
@@ -212,14 +233,28 @@ export default function Header() {
                   </div>
                   <Link
                     href="/profile"
-                    onClick={() => setShowDropdown(false)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setShowDropdown(false);
+                      router.push("/profile");
+                    }}
                     className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-200 transition hover:bg-white/10 hover:text-white"
                   >
                     <User className="h-4 w-4" />
                     <span>My Profile</span>
                   </Link>
                   <button
-                    onClick={handleLogout}
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log("Logout button clicked"); // Debug log
+                      setShowDropdown(false);
+                      handleLogout().catch((error) => {
+                        console.error("Logout failed:", error);
+                      });
+                    }}
                     className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-200 transition hover:bg-red-500/20 hover:text-red-400"
                   >
                     <LogOut className="h-4 w-4" />
