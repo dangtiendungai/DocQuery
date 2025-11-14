@@ -38,17 +38,7 @@ export default function ChatsPage() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [loadingDocs, setLoadingDocs] = useState(true);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
 
   useEffect(() => {
     fetchDocuments();
@@ -77,8 +67,6 @@ export default function ChatsPage() {
       }
     } catch (error) {
       console.error("Error fetching documents:", error);
-    } finally {
-      setLoadingDocs(false);
     }
   };
 
@@ -337,7 +325,6 @@ export default function ChatsPage() {
                     </div>
                   </div>
                 )}
-                <div ref={messagesEndRef} />
               </div>
             </div>
 
