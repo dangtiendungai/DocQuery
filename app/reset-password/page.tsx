@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import TextField from "@/components/ui/TextField";
@@ -10,7 +10,6 @@ import { ArrowLeft, Lock, CheckCircle2 } from "lucide-react";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [status, setStatus] = useState<{
@@ -62,7 +61,8 @@ export default function ResetPasswordPage() {
       if (error) {
         setStatus({
           type: "error",
-          message: error.message || "Failed to reset password. Please try again.",
+          message:
+            error.message || "Failed to reset password. Please try again.",
         });
         setIsSubmitting(false);
         return;
@@ -108,8 +108,8 @@ export default function ResetPasswordPage() {
                 Invalid reset link
               </h1>
               <p className="mt-2 text-sm text-slate-300">
-                This password reset link is invalid or has expired. Please request
-                a new one.
+                This password reset link is invalid or has expired. Please
+                request a new one.
               </p>
             </div>
             <Link href="/forgot-password">
@@ -156,8 +156,8 @@ export default function ResetPasswordPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div aria-live="polite" className="min-h-[1.5rem] text-sm">
-              {status.type !== "idle" && status.message && (
+            {status.type !== "idle" && status.message && (
+              <div aria-live="polite" className="min-h-[1.5rem] text-sm">
                 <div
                   className={`rounded-2xl border px-4 py-3 ${
                     status.type === "success"
@@ -173,8 +173,8 @@ export default function ResetPasswordPage() {
                   )}
                   {status.type === "error" && <span>{status.message}</span>}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             <TextField
               id="password"
@@ -217,4 +217,3 @@ export default function ResetPasswordPage() {
     </div>
   );
 }
-
