@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import FileUpload from "@/components/documents/FileUpload";
-import { Bot, FileUp, Lock, ShieldCheck } from "lucide-react";
+import { Bot, FileUp, Lock, ShieldCheck, Trash2, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
 const features = [
@@ -88,6 +88,7 @@ export default function Home() {
   const router = useRouter();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const uploadSectionRef = useRef<HTMLDivElement>(null);
 
   const scrollToUpload = () => {
@@ -140,6 +141,49 @@ export default function Home() {
 
   const handleUploadComplete = () => {
     fetchDocuments();
+  };
+
+  const handleDeleteDocument = async (documentId: string) => {
+    if (!confirm("Are you sure you want to delete this document? This action cannot be undone.")) {
+      return;
+    }
+
+    setDeletingIds((prev) => new Set(prev).add(documentId));
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        router.push("/login");
+        return;
+      }
+
+      const response = await fetch(`/api/documents/${documentId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.ok) {
+        // Remove from local state
+        setDocuments((prev) => prev.filter((doc) => doc.id !== documentId));
+      } else {
+        const error = await response.json();
+        alert(`Failed to delete document: ${error.error || "Unknown error"}`);
+      }
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      alert("Failed to delete document. Please try again.");
+    } finally {
+      setDeletingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(documentId);
+        return next;
+      });
+    }
   };
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
@@ -251,21 +295,35 @@ export default function Home() {
                   documents.map((doc) => (
                     <div
                       key={doc.id}
-                      className="flex items-center justify-between rounded-2xl border border-white/5 bg-slate-900/60 px-4 py-3"
+                      className="group flex items-center justify-between rounded-2xl border border-white/5 bg-slate-900/60 px-4 py-3 transition hover:border-white/10"
                     >
-                      <div>
-                        <p className="text-sm font-medium text-white">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white truncate">
                           {doc.name}
                         </p>
                         <p className="text-xs text-slate-400">
                           {formatFileSize(doc.file_size)}
                         </p>
                       </div>
-                      <span className="text-xs font-medium text-slate-300">
-                        {doc.status === "processed"
-                          ? `Processed • ${doc.chunk_count} chunks`
-                          : doc.status}
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-medium text-slate-300">
+                          {doc.status === "processed"
+                            ? `Processed • ${doc.chunk_count} chunks`
+                            : doc.status}
+                        </span>
+                        <button
+                          onClick={() => handleDeleteDocument(doc.id)}
+                          disabled={deletingIds.has(doc.id)}
+                          className="opacity-0 group-hover:opacity-100 transition p-1.5 hover:bg-red-500/20 rounded-lg disabled:opacity-50"
+                          aria-label="Delete document"
+                        >
+                          {deletingIds.has(doc.id) ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-red-400" />
+                          ) : (
+                            <Trash2 className="h-4 w-4 text-red-400" />
+                          )}
+                        </button>
+                      </div>
                     </div>
                   ))
                 )}

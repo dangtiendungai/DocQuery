@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import { supabase } from "@/lib/supabaseClient";
-import { Bot, Loader2, Plus, FileText } from "lucide-react";
+import { Bot, Loader2, Plus, FileText, Trash2, MessageSquare } from "lucide-react";
 
 const suggestions = [
   "Summarize the changes between Warranty_v4 and Warranty_v5",
@@ -13,9 +13,17 @@ const suggestions = [
 ];
 
 interface Message {
+  id?: string;
   role: "user" | "assistant";
   content: string;
   citations?: string[];
+}
+
+interface Conversation {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface Document {
@@ -28,6 +36,8 @@ interface Document {
 
 export default function ChatsPage() {
   const router = useRouter();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
@@ -38,11 +48,19 @@ export default function ChatsPage() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [loadingConversations, setLoadingConversations] = useState(true);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchDocuments();
+    fetchConversations();
   }, []);
+
+  useEffect(() => {
+    // Auto-scroll to bottom when messages change
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const fetchDocuments = async () => {
     try {
@@ -70,12 +88,233 @@ export default function ChatsPage() {
     }
   };
 
+  const fetchConversations = async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        return;
+      }
+
+      setLoadingConversations(true);
+      const response = await fetch("/api/conversations", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setConversations(data.conversations || []);
+      }
+    } catch (error) {
+      console.error("Error fetching conversations:", error);
+    } finally {
+      setLoadingConversations(false);
+    }
+  };
+
+  const loadConversation = async (conversationId: string) => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        return;
+      }
+
+      const response = await fetch(`/api/conversations/${conversationId}`, {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const loadedMessages: Message[] = data.messages.map((msg: any) => ({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+          citations: msg.citations || [],
+        }));
+
+        // If no messages, show welcome message
+        if (loadedMessages.length === 0) {
+          setMessages([
+            {
+              role: "assistant",
+              content:
+                "Hello! I'm DocQuery. Ask me anything about your uploaded documents, and I'll search through them to find relevant answers.",
+            },
+          ]);
+        } else {
+          setMessages(loadedMessages);
+        }
+        setCurrentConversationId(conversationId);
+      }
+    } catch (error) {
+      console.error("Error loading conversation:", error);
+    }
+  };
+
+  const createNewConversation = async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        router.push("/login");
+        return;
+      }
+
+      const response = await fetch("/api/conversations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ title: "New Chat" }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        await fetchConversations();
+        setCurrentConversationId(data.conversation.id);
+        setMessages([
+          {
+            role: "assistant",
+            content:
+              "Hello! I'm DocQuery. Ask me anything about your uploaded documents, and I'll search through them to find relevant answers.",
+          },
+        ]);
+        setQuery("");
+        textareaRef.current?.focus();
+      }
+    } catch (error) {
+      console.error("Error creating conversation:", error);
+    }
+  };
+
+  const deleteConversation = async (conversationId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        return;
+      }
+
+      const response = await fetch(`/api/conversations/${conversationId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.ok) {
+        await fetchConversations();
+        if (currentConversationId === conversationId) {
+          setCurrentConversationId(null);
+          setMessages([
+            {
+              role: "assistant",
+              content:
+                "Hello! I'm DocQuery. Ask me anything about your uploaded documents, and I'll search through them to find relevant answers.",
+            },
+          ]);
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting conversation:", error);
+    }
+  };
+
+  const saveMessage = async (message: Message, conversationId: string) => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        return;
+      }
+
+      await fetch("/api/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          conversation_id: conversationId,
+          role: message.role,
+          content: message.content,
+          citations: message.citations || [],
+        }),
+      });
+    } catch (error) {
+      console.error("Error saving message:", error);
+    }
+  };
+
   const handleSend = async () => {
     if (!query.trim() || loading) return;
 
     const userMessage = query.trim();
     setQuery("");
-    setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
+
+    // Ensure we have a conversation
+    let conversationId = currentConversationId;
+    if (!conversationId) {
+      // Create a new conversation
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session) {
+          router.push("/login");
+          return;
+        }
+
+        const response = await fetch("/api/conversations", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ title: userMessage.substring(0, 50) }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          conversationId = data.conversation.id;
+          setCurrentConversationId(conversationId);
+          await fetchConversations();
+        } else {
+          throw new Error("Failed to create conversation");
+        }
+      } catch (error) {
+        console.error("Error creating conversation:", error);
+        return;
+      }
+    }
+
+    // Ensure conversationId is set
+    if (!conversationId) {
+      return;
+    }
+
+    const userMsg: Message = { role: "user", content: userMessage };
+    setMessages((prev) => [...prev, userMsg]);
+    await saveMessage(userMsg, conversationId);
+
     setLoading(true);
 
     try {
@@ -99,33 +338,30 @@ export default function ChatsPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: data.answer,
-            citations: data.citations,
-          },
-        ]);
+        const assistantMsg: Message = {
+          role: "assistant",
+          content: data.answer,
+          citations: data.citations,
+        };
+        setMessages((prev) => [...prev, assistantMsg]);
+        await saveMessage(assistantMsg, conversationId);
       } else {
         const error = await response.json();
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: `Error: ${error.error || "Failed to get response"}`,
-          },
-        ]);
+        const errorMsg: Message = {
+          role: "assistant",
+          content: `Error: ${error.error || "Failed to get response"}`,
+        };
+        setMessages((prev) => [...prev, errorMsg]);
+        await saveMessage(errorMsg, conversationId);
       }
     } catch (error) {
       console.error("Error querying:", error);
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "Sorry, I encountered an error. Please try again.",
-        },
-      ]);
+      const errorMsg: Message = {
+        role: "assistant",
+        content: "Sorry, I encountered an error. Please try again.",
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+      await saveMessage(errorMsg, conversationId);
     } finally {
       setLoading(false);
     }
@@ -139,15 +375,7 @@ export default function ChatsPage() {
   };
 
   const handleNewChat = () => {
-    setMessages([
-      {
-        role: "assistant",
-        content:
-          "Hello! I'm DocQuery. Ask me anything about your uploaded documents, and I'll search through them to find relevant answers.",
-      },
-    ]);
-    setQuery("");
-    textareaRef.current?.focus();
+    createNewConversation();
   };
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -173,6 +401,53 @@ export default function ChatsPage() {
             <Plus className="mr-2 h-4 w-4" />
             New chat
           </Button>
+
+          {/* Conversations List */}
+          <div className="rounded-3xl border border-white/10 bg-slate-900/70 p-5 backdrop-blur">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-300 mb-4">
+              Conversations
+            </h2>
+            {loadingConversations ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+              </div>
+            ) : conversations.length === 0 ? (
+              <p className="text-xs text-slate-400 text-center py-4">
+                No conversations yet. Start a new chat!
+              </p>
+            ) : (
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                {conversations.map((conv) => (
+                  <div
+                    key={conv.id}
+                    onClick={() => loadConversation(conv.id)}
+                    className={`group flex items-center gap-2 rounded-xl border px-3 py-2 cursor-pointer transition ${
+                      currentConversationId === conv.id
+                        ? "border-emerald-400/50 bg-emerald-500/10"
+                        : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10"
+                    }`}
+                  >
+                    <MessageSquare className="h-4 w-4 text-slate-400 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-white truncate">
+                        {conv.title}
+                      </p>
+                      <p className="text-[10px] text-slate-400">
+                        {new Date(conv.updated_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <button
+                      onClick={(e) => deleteConversation(conv.id, e)}
+                      className="opacity-0 group-hover:opacity-100 transition p-1 hover:bg-red-500/20 rounded"
+                      aria-label="Delete conversation"
+                    >
+                      <Trash2 className="h-3 w-3 text-red-400" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {documents.length > 0 && (
             <div className="rounded-3xl border border-white/10 bg-slate-900/70 p-5 backdrop-blur">
@@ -266,7 +541,7 @@ export default function ChatsPage() {
                   const isAssistant = message.role === "assistant";
                   return (
                     <div
-                      key={index}
+                      key={message.id || index}
                       className={`rounded-2xl px-4 py-3 ${
                         isAssistant
                           ? "bg-emerald-500/10 text-emerald-100"
@@ -325,6 +600,7 @@ export default function ChatsPage() {
                     </div>
                   </div>
                 )}
+                <div ref={messagesEndRef} />
               </div>
             </div>
 
