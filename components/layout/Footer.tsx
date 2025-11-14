@@ -43,13 +43,13 @@ export default function Footer() {
         <div className="flex flex-col gap-4 border-t border-white/10 py-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
           <p>© {new Date().getFullYear()} DocQuery Inc. All rights reserved.</p>
           <div className="flex flex-wrap items-center gap-4">
-            <Link className="transition hover:text-white" href="#">
+            <Link className="transition hover:text-white" href="/privacy">
               Privacy
             </Link>
-            <Link className="transition hover:text-white" href="#">
+            <Link className="transition hover:text-white" href="/terms">
               Terms
             </Link>
-            <Link className="transition hover:text-white" href="#">
+            <Link className="transition hover:text-white" href="/status">
               Status
             </Link>
           </div>
