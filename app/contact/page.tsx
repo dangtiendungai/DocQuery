@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, FormEvent } from "react";
 import TextField from "@/components/ui/TextField";
 import Button from "@/components/ui/Button";
 
@@ -15,6 +15,79 @@ export default function ContactPage() {
     company: "",
     message: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [status, setStatus] = useState<{
+    type: "idle" | "success" | "error";
+    message: string | null;
+  }>({ type: "idle", message: null });
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    // Basic validation
+    if (!form.name.trim() || !form.email.trim() || !form.message.trim()) {
+      setStatus({
+        type: "error",
+        message: "Please fill in all required fields.",
+      });
+      return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email)) {
+      setStatus({
+        type: "error",
+        message: "Please enter a valid email address.",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    setStatus({ type: "idle", message: null });
+
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setStatus({
+          type: "error",
+          message:
+            data.error || "Something went wrong. Please try again later.",
+        });
+        return;
+      }
+
+      setStatus({
+        type: "success",
+        message:
+          data.message ||
+          "Thank you for your message! We'll get back to you soon.",
+      });
+
+      // Reset form
+      setForm({
+        name: "",
+        email: "",
+        company: "",
+        message: "",
+      });
+    } catch (error) {
+      console.error("Contact form error:", error);
+      setStatus({
+        type: "error",
+        message: "Something went wrong. Please try again later.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -33,7 +106,22 @@ export default function ContactPage() {
         </div>
 
         <div className="mt-16 grid gap-8 md:grid-cols-2">
-          <form className="space-y-5 rounded-3xl border border-white/10 bg-slate-900/60 p-6">
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-5 rounded-3xl border border-white/10 bg-slate-900/60 p-6"
+          >
+            {status.type !== "idle" && status.message && (
+              <div
+                className={`rounded-2xl border px-4 py-3 text-sm ${
+                  status.type === "success"
+                    ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-100"
+                    : "border-red-400/40 bg-red-500/10 text-red-100"
+                }`}
+              >
+                {status.message}
+              </div>
+            )}
+
             <TextField
               id="name"
               name="name"
@@ -42,6 +130,7 @@ export default function ContactPage() {
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="Your name"
               required
+              disabled={isSubmitting}
             />
             <TextField
               id="email"
@@ -53,6 +142,7 @@ export default function ContactPage() {
               placeholder="your@email.com"
               autoComplete="email"
               required
+              disabled={isSubmitting}
             />
             <TextField
               id="company"
@@ -61,6 +151,7 @@ export default function ContactPage() {
               value={form.company}
               onChange={(e) => setForm({ ...form, company: e.target.value })}
               placeholder="Your company"
+              disabled={isSubmitting}
             />
             <div className="flex flex-col gap-2">
               <label
@@ -74,13 +165,14 @@ export default function ContactPage() {
                 name="message"
                 value={form.message}
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
-                className="h-32 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/50"
+                className="h-32 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 disabled:opacity-50 disabled:cursor-not-allowed"
                 placeholder="Your message..."
                 required
+                disabled={isSubmitting}
               />
             </div>
-            <Button type="submit" className="w-full">
-              Send message
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? "Sending..." : "Send message"}
             </Button>
           </form>
           <div className="space-y-6">

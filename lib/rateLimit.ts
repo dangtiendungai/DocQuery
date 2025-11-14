@@ -104,4 +104,10 @@ export const rateLimiters = {
     windowMs: 15 * 60 * 1000, // 15 minutes
     maxRequests: 10,
   }),
+
+  // Contact: 5 submissions per hour
+  contact: rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    maxRequests: 5,
+  }),
 };
